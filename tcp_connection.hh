@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "buffer.hh"
 #include "callback.hh"
 
 class EventLoop;
@@ -25,6 +26,7 @@ public:
 
     void SetConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; }
     void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
+    void SetWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
 
 private:
     EventLoop *loop_;
@@ -32,7 +34,9 @@ private:
     std::unique_ptr<Channel> channel_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
-    std::string inBuf_;
-    std::string outBuf_;
+    WriteCompleteCallback writeCompleteCallback_;
+    Buffer inBuf_;
+    Buffer outBuf_;
 };
+
 #endif

@@ -16,6 +16,8 @@ EchoServer::EchoServer(EventLoop *loop)
         std::bind(&EchoServer::OnConnection, this, _1));
     server_.SetMessageCallback(
         std::bind(&EchoServer::OnMessage, this, _1, _2));
+    server_.SetWriteCompleteCallback(
+        std::bind(&EchoServer::OnWriteComplete, this, _1));
 }
 
 void EchoServer::Start()
@@ -29,12 +31,16 @@ void EchoServer::OnConnection(const TcpConnectionPtr &conn)
 }
 
 void EchoServer::OnMessage(const TcpConnectionPtr &conn,
-                           std::string *data)
+                           Buffer *data)
 {
     constexpr size_t kMessageLength = 8;
-    while (data->size() > kMessageLength) {
-        std::string message = data->substr(0, kMessageLength);
-        *data = data->substr(kMessageLength, data->size());
+    while (data->ReadableBytes() > kMessageLength) {
+        std::string message = data->RetrieveAsString(kMessageLength);
         conn->Send(message + "\n");
     }
+}
+
+void EchoServer::OnWriteComplete(const TcpConnectionPtr &conn)
+{
+    cout << "onWriteComplete" << endl;
 }

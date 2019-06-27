@@ -1,5 +1,5 @@
-#ifndef MUDUO_EXAMPLES_SIMPLE_ECHO_ECHO_H
-#define MUDUO_EXAMPLES_SIMPLE_ECHO_ECHO_H
+#ifndef ECHO_SERVER_HH
+#define ECHO_SERVER_HH
 
 #include "tcp_server.hh"
 
@@ -12,9 +12,8 @@ public:
 
 private:
     void OnConnection(const TcpConnectionPtr &conn);
-
-    void OnMessage(const TcpConnectionPtr &conn,
-                   std::string *data);
+    void OnMessage(const TcpConnectionPtr &conn, Buffer *data);
+    void OnWriteComplete(const TcpConnectionPtr &conn);
 
     TcpServer server_;
 };

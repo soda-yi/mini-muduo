@@ -11,6 +11,7 @@
 #include <iostream>
 
 #include "channel.hh"
+#include "event_loop.hh"
 
 using std::cout;
 using std::endl;
@@ -49,7 +50,8 @@ void TcpConnection::HandleRead()
         cout << "read 0 closed socket fd:" << sockfd << endl;
         close(sockfd);
     } else {
-        inBuf_.append(line, readlength);
+        std::string linestr(line, readlength);
+        inBuf_.Append(linestr);
         messageCallback_(shared_from_this(), &inBuf_);
     }
 }
@@ -58,12 +60,13 @@ void TcpConnection::HandleWrite()
 {
     int sockfd = channel_->GetSockfd();
     if (channel_->IsWriting()) {
-        int n = ::write(sockfd, outBuf_.c_str(), outBuf_.size());
+        int n = ::write(sockfd, outBuf_.Peek(), outBuf_.ReadableBytes());
         if (n > 0) {
             cout << "write " << n << " bytes data again" << endl;
-            outBuf_ = outBuf_.substr(n, outBuf_.size());
-            if (outBuf_.empty()) {
+            outBuf_.Retrieve(n);
+            if (outBuf_.ReadableBytes() == 0) {
                 channel_->DisableWriting();
+                loop_->QueueLoop([this] { writeCompleteCallback_(shared_from_this()); });
             }
         }
     }
@@ -72,14 +75,16 @@ void TcpConnection::HandleWrite()
 void TcpConnection::Send(const std::string &message)
 {
     int n = 0;
-    if (outBuf_.empty()) {
+    if (outBuf_.ReadableBytes() == 0) {
         n = ::write(sockfd_, message.c_str(), message.size());
         if (n < 0) {
             cout << "write error" << endl;
+        } else if (n == static_cast<int>(message.size())) {
+            loop_->QueueLoop([this] { writeCompleteCallback_(shared_from_this()); });
         }
     }
     if (n < static_cast<int>(message.size())) {
-        outBuf_ += message.substr(n, message.size());
+        outBuf_.Append(message.substr(n, message.size()));
         if (!channel_->IsWriting()) {
             channel_->EnableWriting();
         }

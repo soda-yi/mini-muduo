@@ -17,10 +17,14 @@ Channel::~Channel()
 void Channel::HandleEvent()
 {
     if (revents_ & EPOLLIN) {
-        readCallback_();
+        if (readCallback_) {
+            readCallback_();
+        }
     }
     if (revents_ & EPOLLOUT) {
-        writeCallback_();
+        if (writeCallback_) {
+            writeCallback_();
+        }
     }
 }
 

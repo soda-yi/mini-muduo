@@ -34,6 +34,7 @@ void TcpServer::NewConnection(int sockfd)
     connections_[sockfd] = tcpConnection;
     tcpConnection->SetConnectionCallback(connectionCallback_);
     tcpConnection->SetMessageCallback(messageCallback_);
+    tcpConnection->SetWriteCompleteCallback(writeCompleteCallback_);
     tcpConnection->ConnectEstablished();
 }
 

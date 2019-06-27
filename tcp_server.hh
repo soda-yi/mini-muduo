@@ -24,6 +24,7 @@ public:
 
     void SetConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; }
     void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
+    void SetWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
 
 private:
     EventLoop *loop_;
@@ -31,6 +32,7 @@ private:
     std::map<int, TcpConnectionPtr> connections_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
+    WriteCompleteCallback writeCompleteCallback_;
 };
 
 #endif
