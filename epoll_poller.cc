@@ -50,7 +50,7 @@ void EpollPoller::UpdateChannel(Channel *channel)
     struct epoll_event ev;
     ev.data.ptr = channel;
     ev.events = channel->GetEvents();
-    int fd = channel->GetSockfd();
+    int fd = channel->GetFd();
     if (index == kNew) {
         channel->SetIndex(kAdded);
         ::epoll_ctl(epollfd_, EPOLL_CTL_ADD, fd, &ev);

@@ -8,6 +8,7 @@
 
 #include "channel.hh"
 #include "epoll_poller.hh"
+#include "timer_queue.hh"
 
 using std::cout;
 using std::endl;
@@ -15,6 +16,7 @@ using std::endl;
 EventLoop::EventLoop()
     : quit_(false),
       poller_(new EpollPoller()),
+      timerQueue_(new TimerQueue(this)),
       wakeupfd_(::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)),
       wakeupChannel_(new Channel(this, wakeupfd_))
 {
@@ -69,6 +71,28 @@ void EventLoop::HandleRead()
     if (n != sizeof(one)) {
         cout << "EventLoop::handleRead() reads " << n << " bytes instead of 8" << endl;
     }
+}
+
+TimerId EventLoop::RunAt(Timestamp when, TimerCallback cb)
+{
+    return timerQueue_->AddTimer(cb, when, 0.0);
+}
+
+TimerId EventLoop::RunAfter(double delay, TimerCallback cb)
+{
+    Timestamp time(AddTime(Timestamp::Now(), delay));
+    return RunAt(time, std::move(cb));
+}
+
+TimerId EventLoop::RunEvery(double interval, TimerCallback cb)
+{
+    Timestamp time(AddTime(Timestamp::Now(), interval));
+    return timerQueue_->AddTimer(std::move(cb), time, interval);
+}
+
+void EventLoop::CancelTimer(TimerId timerId)
+{
+    timerQueue_->CancelTimer(timerId);
 }
 
 void EventLoop::DoPendingFunctors()

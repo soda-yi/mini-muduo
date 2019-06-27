@@ -18,7 +18,7 @@ public:
     void SetRevents(int revent) { revents_ = revent; }
     void SetIndex(int index) { index_ = index; }
     int GetIndex() const { return index_; }
-    int GetSockfd() const { return sockfd_; }
+    int GetFd() const { return fd_; }
     int GetEvents() const { return events_; }
 
     void EnableReading();
@@ -32,7 +32,7 @@ public:
 private:
     void Update();
     EventLoop *loop_;
-    int sockfd_;
+    int fd_;
     int events_ = 0;  // 关注的事件
     int revents_ = 0; // 发生的事件
     int index_ = -1;

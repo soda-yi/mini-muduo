@@ -32,7 +32,7 @@ TcpConnection::~TcpConnection()
 
 void TcpConnection::HandleRead()
 {
-    int sockfd = channel_->GetSockfd();
+    int sockfd = channel_->GetFd();
     constexpr int kMaxLength = 100;
     int readlength;
     char line[kMaxLength];
@@ -58,7 +58,7 @@ void TcpConnection::HandleRead()
 
 void TcpConnection::HandleWrite()
 {
-    int sockfd = channel_->GetSockfd();
+    int sockfd = channel_->GetFd();
     if (channel_->IsWriting()) {
         int n = ::write(sockfd, outBuf_.Peek(), outBuf_.ReadableBytes());
         if (n > 0) {

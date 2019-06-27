@@ -3,14 +3,15 @@
 
 #include <iostream>
 
+#include "event_loop.hh"
+
 using std::cout;
 using std::endl;
 using std::placeholders::_1;
 using std::placeholders::_2;
-using std::placeholders::_3;
 
 EchoServer::EchoServer(EventLoop *loop)
-    : server_(loop)
+    : server_(loop), loop_(loop)
 {
     server_.SetConnectionCallback(
         std::bind(&EchoServer::OnConnection, this, _1));
@@ -38,9 +39,19 @@ void EchoServer::OnMessage(const TcpConnectionPtr &conn,
         std::string message = data->RetrieveAsString(kMessageLength);
         conn->Send(message + "\n");
     }
+    timerId_ = loop_->RunEvery(0.5, std::bind(&EchoServer::Run, this));
 }
 
 void EchoServer::OnWriteComplete(const TcpConnectionPtr &conn)
 {
     cout << "onWriteComplete" << endl;
+}
+
+void EchoServer::Run()
+{
+    cout << index_ << endl;
+    if (index_++ == 3) {
+        loop_->CancelTimer(timerId_);
+        index_ = 0;
+    }
 }

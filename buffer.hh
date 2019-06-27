@@ -7,11 +7,9 @@
 class Buffer
 {
 public:
-    Buffer();
-    ~Buffer();
     const char *Peek() const;
-    int ReadableBytes() const;
-    void Retrieve(int len);
+    size_t ReadableBytes() const;
+    void Retrieve(size_t len);
     void Append(const std::string &buf);
     std::string RetrieveAllAsString();
     std::string RetrieveAsString(size_t len);

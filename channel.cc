@@ -6,7 +6,7 @@
 
 Channel::Channel(EventLoop *loop, int sockfd)
     : loop_(loop),
-      sockfd_(sockfd)
+      fd_(sockfd)
 {
 }
 
@@ -42,7 +42,7 @@ void Channel::EnableWriting()
 
 void Channel::DisableWriting()
 {
-    events_ & ~EPOLLOUT;
+    events_ &= ~EPOLLOUT;
     Update();
 }
 
