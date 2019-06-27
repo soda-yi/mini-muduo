@@ -6,23 +6,24 @@
 
 #include "channel.hh"
 
+class EventLoop;
+
 class Acceptor
 {
 public:
     using NewConnectionCallback = std::function<void(int sockfd)>;
 
-    Acceptor(int epollfd);
+    Acceptor(EventLoop *loop);
     ~Acceptor();
 
     void OnIn(int socket);
-    void SetCallBack(NewConnectionCallback callback) { callback_ = std::move(callback); }
-    void Start();
+    void SetNewConnectionCallback(const NewConnectionCallback &cb) { newConnectionCallback_ = cb; }
+    void Listen();
 
 private:
-    int CreateAndListen();
-    int epollfd_;
-    int listenfd_ = -1;
-    std::shared_ptr<Channel> channel_ = nullptr;
-    NewConnectionCallback callback_ = nullptr;
+    EventLoop *loop_;
+    int listenfd_;
+    Channel acceptChannel_;
+    NewConnectionCallback newConnectionCallback_ = nullptr;
 };
 #endif

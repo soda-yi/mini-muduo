@@ -6,27 +6,26 @@
 #include <map>
 #include <memory>
 
-#include "acceptor.hh"
-#include "channel.hh"
-#include "tcp_connection.hh"
+class Acceptor;
+class Channel;
+class EventLoop;
+class TcpConnection;
 
 class TcpServer
 {
 public:
-    TcpServer();
+    TcpServer(EventLoop *loop);
     ~TcpServer();
     void Start();
     void NewConnection(int sockfd);
 
 private:
-    void Update(std::shared_ptr<Channel> pChannel, int op);
-
     static constexpr int kMaxEvents = 500;
 
-    int epollfd_ = -1;
+    EventLoop *loop_;
     struct epoll_event events_[kMaxEvents];
     std::map<int, std::shared_ptr<TcpConnection>> connections_;
-    std::shared_ptr<Acceptor> acceptor_ = nullptr;
+    std::unique_ptr<Acceptor> acceptor_;
 };
 
 #endif

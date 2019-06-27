@@ -3,19 +3,20 @@
 
 #include <memory>
 
-#include "channel.hh"
+class EventLoop;
+class Channel;
 
 class TcpConnection
 {
 public:
-    TcpConnection(int epollfd, int sockfd);
+    TcpConnection(EventLoop *loop, int sockfd);
     ~TcpConnection();
 
     void OnIn(int sockfd);
 
 private:
-    int epollfd_;
+    EventLoop *loop_;
     int sockfd_;
-    std::shared_ptr<Channel> channel_ = nullptr;
+    std::unique_ptr<Channel> channel_;
 };
 #endif

@@ -9,19 +9,12 @@
 using std::cout;
 using std::endl;
 
-Acceptor::Acceptor(int epollfd)
-    : epollfd_(epollfd)
-{
-}
-
-Acceptor::~Acceptor()
-{
-}
-
-int Acceptor::CreateAndListen()
+Acceptor::Acceptor(EventLoop *loop)
+    : loop_(loop),
+      listenfd_(socket(AF_INET, SOCK_STREAM, 0)),
+      acceptChannel_(loop_, listenfd_)
 {
     int on = 1;
-    listenfd_ = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in servaddr;
     fcntl(listenfd_, F_SETFL, O_NONBLOCK); //no-block io
     setsockopt(listenfd_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -33,12 +26,11 @@ int Acceptor::CreateAndListen()
         cout << "bind error, errno:" << errno << endl;
     }
 
-    constexpr int backlog = 10;
-    if (-1 == listen(listenfd_, backlog)) {
-        cout << "listen error, errno:" << errno << endl;
-    }
+    acceptChannel_.SetCallback(std::bind(&Acceptor::OnIn, this, std::placeholders::_1));
+}
 
-    return listenfd_;
+Acceptor::~Acceptor()
+{
 }
 
 void Acceptor::OnIn(int socket)
@@ -59,13 +51,14 @@ void Acceptor::OnIn(int socket)
     }
     fcntl(connfd, F_SETFL, O_NONBLOCK); //no-block io
 
-    callback_(connfd);
+    newConnectionCallback_(connfd);
 }
 
-void Acceptor::Start()
+void Acceptor::Listen()
 {
-    listenfd_ = CreateAndListen();
-    channel_ = std::make_shared<Channel>(epollfd_, listenfd_);
-    channel_->SetCallback(std::bind(&Acceptor::OnIn, this, std::placeholders::_1));
-    channel_->EnableReading();
+    constexpr int backlog = 10;
+    if (-1 == listen(listenfd_, backlog)) {
+        cout << "listen error, errno:" << errno << endl;
+    }
+    acceptChannel_.EnableReading();
 }

@@ -10,13 +10,16 @@
 #include <functional>
 #include <iostream>
 
+#include "channel.hh"
+
 using std::cout;
 using std::endl;
 
-TcpConnection::TcpConnection(int epollfd, int sockfd)
-    : epollfd_(epollfd), sockfd_(sockfd)
+TcpConnection::TcpConnection(EventLoop *loop, int sockfd)
+    : loop_(loop),
+      sockfd_(sockfd),
+      channel_(new Channel(loop_, sockfd_))
 {
-    channel_ = std::make_shared<Channel>(epollfd_, sockfd_);
     channel_->SetCallback(std::bind(&TcpConnection::OnIn, this, std::placeholders::_1));
     channel_->EnableReading();
 }

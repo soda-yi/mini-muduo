@@ -1,9 +1,11 @@
 #include "channel.hh"
 
+#include "event_loop.hh"
+
 #include <sys/epoll.h>
 
-Channel::Channel(int epollfd, int sockfd)
-    : epollfd_(epollfd),
+Channel::Channel(EventLoop *loop, int sockfd)
+    : loop_(loop),
       sockfd_(sockfd)
 {
 }
@@ -27,8 +29,5 @@ void Channel::EnableReading()
 
 void Channel::Update()
 {
-    struct epoll_event ev;
-    ev.data.ptr = this;
-    ev.events = events_;
-    epoll_ctl(epollfd_, EPOLL_CTL_ADD, sockfd_, &ev);
+    loop_->UpdateChannel(this);
 }
