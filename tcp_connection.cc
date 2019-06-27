@@ -47,8 +47,22 @@ void TcpConnection::OnIn(int sockfd)
         cout << "read 0 closed socket fd:" << sockfd << endl;
         close(sockfd);
     } else {
-        if (write(sockfd, line, readlength) != readlength) {
-            cout << "error: not finished one time" << endl;
-        }
+        std::string buf(line, kMaxLength);
+        messageCallback_(shared_from_this(), buf);
+    }
+}
+
+void TcpConnection::Send(const std::string &message)
+{
+    int n = ::write(sockfd_, message.c_str(), message.size());
+    if (n != static_cast<int>(message.size())) {
+        cout << "write error ! " << message.size() - n << "bytes left" << endl;
+    }
+}
+
+void TcpConnection::ConnectEstablished()
+{
+    if (connectionCallback_) {
+        connectionCallback_(shared_from_this());
     }
 }

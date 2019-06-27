@@ -32,6 +32,9 @@ void TcpServer::NewConnection(int sockfd)
 {
     auto tcpConnection = std::make_shared<TcpConnection>(loop_, sockfd);
     connections_[sockfd] = tcpConnection;
+    tcpConnection->SetConnectionCallback(connectionCallback_);
+    tcpConnection->SetMessageCallback(messageCallback_);
+    tcpConnection->ConnectEstablished();
 }
 
 void TcpServer::Start()

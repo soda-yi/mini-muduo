@@ -6,6 +6,8 @@
 #include <map>
 #include <memory>
 
+#include "callback.hh"
+
 class Acceptor;
 class Channel;
 class EventLoop;
@@ -16,16 +18,19 @@ class TcpServer
 public:
     TcpServer(EventLoop *loop);
     ~TcpServer();
+
     void Start();
     void NewConnection(int sockfd);
 
-private:
-    static constexpr int kMaxEvents = 500;
+    void SetConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; }
+    void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
 
+private:
     EventLoop *loop_;
-    struct epoll_event events_[kMaxEvents];
-    std::map<int, std::shared_ptr<TcpConnection>> connections_;
     std::unique_ptr<Acceptor> acceptor_;
+    std::map<int, TcpConnectionPtr> connections_;
+    ConnectionCallback connectionCallback_;
+    MessageCallback messageCallback_;
 };
 
 #endif
