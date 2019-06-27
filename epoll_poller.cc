@@ -9,6 +9,12 @@
 using std::cout;
 using std::endl;
 
+namespace
+{
+const int kNew = -1;
+const int kAdded = 1;
+} // namespace
+
 EpollPoller::EpollPoller()
     : epollfd_(::epoll_create1(EPOLL_CLOEXEC)),
       events_(kMaxEvents)
@@ -40,9 +46,15 @@ void EpollPoller::Poll(ChannelList *activeChannels)
 
 void EpollPoller::UpdateChannel(Channel *channel)
 {
+    int index = channel->GetIndex();
     struct epoll_event ev;
     ev.data.ptr = channel;
     ev.events = channel->GetEvents();
     int fd = channel->GetSockfd();
-    ::epoll_ctl(epollfd_, EPOLL_CTL_ADD, fd, &ev);
+    if (index == kNew) {
+        channel->SetIndex(kAdded);
+        ::epoll_ctl(epollfd_, EPOLL_CTL_ADD, fd, &ev);
+    } else {
+        ::epoll_ctl(epollfd_, EPOLL_CTL_MOD, fd, &ev);
+    }
 }

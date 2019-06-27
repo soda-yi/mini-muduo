@@ -9,9 +9,6 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 using std::placeholders::_3;
 
-// using namespace muduo;
-// using namespace muduo::net;
-
 EchoServer::EchoServer(EventLoop *loop)
     : server_(loop)
 {
@@ -32,8 +29,12 @@ void EchoServer::OnConnection(const TcpConnectionPtr &conn)
 }
 
 void EchoServer::OnMessage(const TcpConnectionPtr &conn,
-                           const std::string &data)
+                           std::string *data)
 {
-    cout << "onmessage" << endl;
-    conn->Send(data);
+    constexpr size_t kMessageLength = 8;
+    while (data->size() > kMessageLength) {
+        std::string message = data->substr(0, kMessageLength);
+        *data = data->substr(kMessageLength, data->size());
+        conn->Send(message + "\n");
+    }
 }

@@ -14,7 +14,7 @@ private:
     void OnConnection(const TcpConnectionPtr &conn);
 
     void OnMessage(const TcpConnectionPtr &conn,
-                   const std::string &buf);
+                   std::string *data);
 
     TcpServer server_;
 };

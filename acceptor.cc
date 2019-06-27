@@ -26,14 +26,14 @@ Acceptor::Acceptor(EventLoop *loop)
         cout << "bind error, errno:" << errno << endl;
     }
 
-    acceptChannel_.SetCallback(std::bind(&Acceptor::OnIn, this, std::placeholders::_1));
+    acceptChannel_.SetReadCallback(std::bind(&Acceptor::HandleRead, this));
 }
 
 Acceptor::~Acceptor()
 {
 }
 
-void Acceptor::OnIn(int socket)
+void Acceptor::HandleRead()
 {
     int connfd;
     struct sockaddr_in cliaddr;

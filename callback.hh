@@ -9,6 +9,6 @@ class TcpConnection;
 
 typedef std::shared_ptr<TcpConnection> TcpConnectionPtr;
 typedef std::function<void(const TcpConnectionPtr &)> ConnectionCallback;
-typedef std::function<void(const TcpConnectionPtr &, const std::string &)> MessageCallback;
+typedef std::function<void(const TcpConnectionPtr &, std::string *)> MessageCallback;
 
 #endif

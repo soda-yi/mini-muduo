@@ -8,16 +8,25 @@ class EventLoop;
 class Channel
 {
 public:
-    using EventCallback = std::function<void(int)>;
+    using EventCallback = std::function<void()>;
 
     Channel(EventLoop *loop, int sockfd);
     ~Channel();
 
-    void SetCallback(EventCallback callback) { callback_ = std::move(callback); }
+    void SetReadCallback(EventCallback cb) { readCallback_ = std::move(cb); }
+    void SetWriteCallback(EventCallback cb) { writeCallback_ = std::move(cb); }
     void SetRevents(int revent) { revents_ = revent; }
+    void SetIndex(int index) { index_ = index; }
+    int GetIndex() const { return index_; }
     int GetSockfd() const { return sockfd_; }
     int GetEvents() const { return events_; }
+
     void EnableReading();
+    void EnableWriting();
+    void DisableWriting();
+    /* 判断events_中是否有EPOLLOUT，即是否对写感兴趣 */
+    bool IsWriting() const;
+
     void HandleEvent();
 
 private:
@@ -26,7 +35,9 @@ private:
     int sockfd_;
     int events_ = 0;  // 关注的事件
     int revents_ = 0; // 发生的事件
-    EventCallback callback_ = nullptr;
+    int index_ = -1;
+    EventCallback readCallback_ = nullptr;
+    EventCallback writeCallback_ = nullptr;
 };
 
 #endif

@@ -16,7 +16,7 @@ public:
     Acceptor(EventLoop *loop);
     ~Acceptor();
 
-    void OnIn(int socket);
+    void HandleRead();
     void SetNewConnectionCallback(const NewConnectionCallback &cb) { newConnectionCallback_ = cb; }
     void Listen();
 

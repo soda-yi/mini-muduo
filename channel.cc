@@ -17,7 +17,10 @@ Channel::~Channel()
 void Channel::HandleEvent()
 {
     if (revents_ & EPOLLIN) {
-        callback_(sockfd_);
+        readCallback_();
+    }
+    if (revents_ & EPOLLOUT) {
+        writeCallback_();
     }
 }
 
@@ -27,6 +30,24 @@ void Channel::EnableReading()
     Update();
 }
 
+void Channel::EnableWriting()
+{
+    events_ |= EPOLLOUT;
+    Update();
+}
+
+void Channel::DisableWriting()
+{
+    events_ & ~EPOLLOUT;
+    Update();
+}
+
+bool Channel::IsWriting() const
+{
+    return events_ & EPOLLOUT;
+}
+
+/* 具体实现中涉及epoll的操作，所以将实现置于poller中 */
 void Channel::Update()
 {
     loop_->UpdateChannel(this);

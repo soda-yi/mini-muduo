@@ -20,7 +20,8 @@ TcpConnection::TcpConnection(EventLoop *loop, int sockfd)
       sockfd_(sockfd),
       channel_(new Channel(loop_, sockfd_))
 {
-    channel_->SetCallback(std::bind(&TcpConnection::OnIn, this, std::placeholders::_1));
+    channel_->SetReadCallback(std::bind(&TcpConnection::HandleRead, this));
+    channel_->SetWriteCallback(std::bind(&TcpConnection::HandleWrite, this));
     channel_->EnableReading();
 }
 
@@ -28,8 +29,9 @@ TcpConnection::~TcpConnection()
 {
 }
 
-void TcpConnection::OnIn(int sockfd)
+void TcpConnection::HandleRead()
 {
+    int sockfd = channel_->GetSockfd();
     constexpr int kMaxLength = 100;
     int readlength;
     char line[kMaxLength];
@@ -47,16 +49,40 @@ void TcpConnection::OnIn(int sockfd)
         cout << "read 0 closed socket fd:" << sockfd << endl;
         close(sockfd);
     } else {
-        std::string buf(line, kMaxLength);
-        messageCallback_(shared_from_this(), buf);
+        inBuf_.append(line, readlength);
+        messageCallback_(shared_from_this(), &inBuf_);
+    }
+}
+
+void TcpConnection::HandleWrite()
+{
+    int sockfd = channel_->GetSockfd();
+    if (channel_->IsWriting()) {
+        int n = ::write(sockfd, outBuf_.c_str(), outBuf_.size());
+        if (n > 0) {
+            cout << "write " << n << " bytes data again" << endl;
+            outBuf_ = outBuf_.substr(n, outBuf_.size());
+            if (outBuf_.empty()) {
+                channel_->DisableWriting();
+            }
+        }
     }
 }
 
 void TcpConnection::Send(const std::string &message)
 {
-    int n = ::write(sockfd_, message.c_str(), message.size());
-    if (n != static_cast<int>(message.size())) {
-        cout << "write error ! " << message.size() - n << "bytes left" << endl;
+    int n = 0;
+    if (outBuf_.empty()) {
+        n = ::write(sockfd_, message.c_str(), message.size());
+        if (n < 0) {
+            cout << "write error" << endl;
+        }
+    }
+    if (n < static_cast<int>(message.size())) {
+        outBuf_ += message.substr(n, message.size());
+        if (!channel_->IsWriting()) {
+            channel_->EnableWriting();
+        }
     }
 }
 
