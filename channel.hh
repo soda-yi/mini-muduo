@@ -15,6 +15,7 @@ public:
 
     void SetReadCallback(EventCallback cb) { readCallback_ = std::move(cb); }
     void SetWriteCallback(EventCallback cb) { writeCallback_ = std::move(cb); }
+    void SetCloseCallback(EventCallback cb) { closeCallback_ = std::move(cb); }
     void SetRevents(int revent) { revents_ = revent; }
     void SetIndex(int index) { index_ = index; }
     int GetIndex() const { return index_; }
@@ -22,15 +23,19 @@ public:
     int GetEvents() const { return events_; }
 
     void EnableReading();
+    void DisableReading();
     void EnableWriting();
     void DisableWriting();
+    void DisableAll();
     /* 判断events_中是否有EPOLLOUT，即是否对写感兴趣 */
     bool IsWriting() const;
+    bool IsReading() const;
 
     void HandleEvent();
+    void Update();
+    void Remove();
 
 private:
-    void Update();
     EventLoop *loop_;
     int fd_;
     int events_ = 0;  // 关注的事件
@@ -38,6 +43,7 @@ private:
     int index_ = -1;
     EventCallback readCallback_ = nullptr;
     EventCallback writeCallback_ = nullptr;
+    EventCallback closeCallback_ = nullptr;
 };
 
 #endif

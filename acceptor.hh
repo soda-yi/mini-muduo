@@ -5,15 +5,16 @@
 #include <memory>
 
 #include "channel.hh"
+#include "network.hh"
 
 class EventLoop;
 
 class Acceptor
 {
 public:
-    using NewConnectionCallback = std::function<void(int sockfd)>;
+    using NewConnectionCallback = std::function<void(int sockfd, const EndPoint &endpoint)>;
 
-    Acceptor(EventLoop *loop);
+    Acceptor(EventLoop *loop, const EndPoint &endpoint);
     ~Acceptor();
 
     void HandleRead();

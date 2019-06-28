@@ -69,7 +69,12 @@ TimerQueue::TimerQueue(EventLoop *loop)
 
 TimerQueue::~TimerQueue()
 {
+    timerfdChannel_.DisableAll();
+    timerfdChannel_.Remove();
     ::close(timerfd_);
+    for (const Entry &timer : timers_) {
+        delete timer.second;
+    }
 }
 
 void TimerQueue::doAddTimer(Timer *timer)
@@ -85,6 +90,7 @@ void TimerQueue::doCancelTimer(TimerId timerId)
     TimerList::iterator it;
     for (it = timers_.begin(); it != timers_.end(); ++it) {
         if (it->second == timerId.timer_) {
+            delete it->second;
             timers_.erase(it);
             break;
         }
@@ -93,7 +99,7 @@ void TimerQueue::doCancelTimer(TimerId timerId)
 
 TimerId TimerQueue::AddTimer(TimerCallback cb, Timestamp when, double interval)
 {
-    Timer *timer = new Timer(cb, when, interval); //Memory Leak !!!
+    Timer *timer = new Timer(cb, when, interval);
     loop_->QueueInLoop(std::bind(&TimerQueue::doAddTimer, this, timer));
     return TimerId(timer, timer->GetSequence());
 }
@@ -132,6 +138,8 @@ void TimerQueue::reset(const vector<Entry> &expired, Timestamp now)
         if (it->second->IsRepeat()) {
             it->second->Restart(now);
             insert(it->second);
+        } else {
+            delete it->second;
         }
     }
 

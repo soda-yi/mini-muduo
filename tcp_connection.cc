@@ -18,11 +18,13 @@ using std::endl;
 
 TcpConnection::TcpConnection(EventLoop *loop, int sockfd)
     : loop_(loop),
+      state_(kConnecting),
       sockfd_(sockfd),
       channel_(new Channel(loop_, sockfd_))
 {
     channel_->SetReadCallback(std::bind(&TcpConnection::HandleRead, this));
     channel_->SetWriteCallback(std::bind(&TcpConnection::HandleWrite, this));
+    channel_->SetCloseCallback(std::bind(&TcpConnection::HandleClose, this));
     channel_->EnableReading();
 }
 
@@ -72,6 +74,17 @@ void TcpConnection::HandleWrite()
     }
 }
 
+void TcpConnection::HandleClose()
+{
+    state_ = kDisconnected;
+    channel_->DisableAll();
+
+    TcpConnectionPtr guardThis(shared_from_this());
+    connectionCallback_(guardThis);
+    // must be the last line
+    closeCallback_(guardThis);
+}
+
 void TcpConnection::Send(const std::string &message)
 {
     loop_->RunInLoop(std::bind(&TcpConnection::SendInLoop, this, message));
@@ -97,9 +110,40 @@ void TcpConnection::SendInLoop(const std::string &message)
     }
 }
 
+void TcpConnection::Shutdown()
+{
+    if (state_ == kConnected) {
+        state_ = kDisconnecting;
+        loop_->RunInLoop([this] {
+            if (!channel_->IsWriting()) {
+                ::shutdown(sockfd_, SHUT_WR);
+            }
+        });
+    }
+}
+
+void TcpConnection::ForceClose()
+{
+    if (state_ == kConnected || state_ == kDisconnecting) {
+        state_ = kDisconnecting;
+        loop_->QueueInLoop([this] { HandleClose(); });
+    }
+}
+
 void TcpConnection::ConnectEstablished()
 {
     if (connectionCallback_) {
         connectionCallback_(shared_from_this());
     }
+}
+
+void TcpConnection::ConnectDestroyed()
+{
+    if (state_ == kConnected) {
+        state_ = kDisconnected;
+        channel_->DisableAll();
+
+        connectionCallback_(shared_from_this());
+    }
+    channel_->Remove();
 }

@@ -9,7 +9,7 @@
 using std::cout;
 using std::endl;
 
-Acceptor::Acceptor(EventLoop *loop)
+Acceptor::Acceptor(EventLoop *loop, const EndPoint &endpoint)
     : loop_(loop),
       listenfd_(socket(AF_INET, SOCK_STREAM, 0)),
       acceptChannel_(loop_, listenfd_)
@@ -19,8 +19,8 @@ Acceptor::Acceptor(EventLoop *loop)
     fcntl(listenfd_, F_SETFL, O_NONBLOCK); //no-block io
     setsockopt(listenfd_, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(11111);
+    servaddr.sin_addr.s_addr = inet_addr(endpoint.ip_addr.c_str());
+    servaddr.sin_port = htons(endpoint.port);
 
     if (-1 == bind(listenfd_, (struct sockaddr *)&servaddr, sizeof(servaddr))) {
         cout << "bind error, errno:" << errno << endl;
@@ -31,6 +31,8 @@ Acceptor::Acceptor(EventLoop *loop)
 
 Acceptor::~Acceptor()
 {
+    acceptChannel_.DisableAll();
+    acceptChannel_.Remove();
 }
 
 void Acceptor::HandleRead()
@@ -51,7 +53,8 @@ void Acceptor::HandleRead()
     }
     fcntl(connfd, F_SETFL, O_NONBLOCK); //no-block io
 
-    newConnectionCallback_(connfd);
+    EndPoint endpoint{inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port)};
+    newConnectionCallback_(connfd, endpoint);
 }
 
 void Acceptor::Listen()

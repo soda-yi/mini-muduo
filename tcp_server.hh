@@ -6,7 +6,8 @@
 #include <map>
 #include <memory>
 
-#include "callback.hh"
+#include "callbacks.hh"
+#include "network.hh"
 
 class Acceptor;
 class Channel;
@@ -16,15 +17,16 @@ class TcpConnection;
 class TcpServer
 {
 public:
-    TcpServer(EventLoop *loop);
+    TcpServer(EventLoop *loop, const EndPoint &endpoint);
     ~TcpServer();
 
     void Start();
-    void NewConnection(int sockfd);
+    void NewConnection(int sockfd, const EndPoint &endpoint);
 
     void SetConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; }
     void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
     void SetWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
+    void SetCloseCallback(const CloseCallback &cb) { closeCallback_ = cb; }
 
 private:
     EventLoop *loop_;
@@ -33,6 +35,7 @@ private:
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
     WriteCompleteCallback writeCompleteCallback_;
+    CloseCallback closeCallback_;
 };
 
 #endif

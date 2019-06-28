@@ -4,7 +4,8 @@
 int main()
 {
     EventLoop loop;
-    EchoServer echoserver(&loop);
+    EndPoint endpoint{"0.0.0.0", 27272};
+    EchoServer echoserver(&loop, endpoint);
     echoserver.Start();
     loop.Loop();
     return 0;

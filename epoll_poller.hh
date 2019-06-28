@@ -16,6 +16,7 @@ public:
     ~EpollPoller();
     void Poll(ChannelList *activeChannels);
     void UpdateChannel(Channel *channel);
+    void RemoveChannel(Channel *channel);
 
 private:
     using EventList = std::vector<struct epoll_event>;

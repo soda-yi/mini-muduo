@@ -1,7 +1,7 @@
 #ifndef TIMERQUEUE_HH
 #define TIMERQUEUE_HH
 
-#include "callback.hh"
+#include "callbacks.hh"
 #include "channel.hh"
 #include "timestamp.hh"
 

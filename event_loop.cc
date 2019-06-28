@@ -32,6 +32,9 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
+    wakeupChannel_->DisableAll();
+    wakeupChannel_->Remove();
+    ::close(wakeupfd_);
 }
 
 void EventLoop::Loop()
@@ -49,6 +52,11 @@ void EventLoop::Loop()
 void EventLoop::UpdateChannel(Channel *channel)
 {
     poller_->UpdateChannel(channel);
+}
+
+void EventLoop::RemoveChannel(Channel *channel)
+{
+    poller_->RemoveChannel(channel);
 }
 
 void EventLoop::RunInLoop(Functor functor)

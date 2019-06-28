@@ -8,7 +8,7 @@
 #include <thread>
 #include <vector>
 
-#include "callback.hh"
+#include "callbacks.hh"
 #include "timer_id.hh"
 #include "timestamp.hh"
 
@@ -25,6 +25,7 @@ public:
     ~EventLoop();
     void Loop();
     void UpdateChannel(Channel *channel);
+    void RemoveChannel(Channel *channel);
     void QueueInLoop(Functor functor);
     void RunInLoop(Functor functor);
     void HandleRead();

@@ -26,11 +26,22 @@ void Channel::HandleEvent()
             writeCallback_();
         }
     }
+    if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
+        if (closeCallback_) {
+            closeCallback_();
+        }
+    }
 }
 
 void Channel::EnableReading()
 {
     events_ |= EPOLLIN;
+    Update();
+}
+
+void Channel::DisableReading()
+{
+    events_ &= ~EPOLLIN;
     Update();
 }
 
@@ -46,13 +57,29 @@ void Channel::DisableWriting()
     Update();
 }
 
+void Channel::DisableAll()
+{
+    events_ = 0;
+    Update();
+}
+
 bool Channel::IsWriting() const
 {
     return events_ & EPOLLOUT;
+}
+
+bool Channel::IsReading() const
+{
+    return events_ & EPOLLIN;
 }
 
 /* 具体实现中涉及epoll的操作，所以将实现置于poller中 */
 void Channel::Update()
 {
     loop_->UpdateChannel(this);
+}
+
+void Channel::Remove()
+{
+    loop_->RemoveChannel(this);
 }

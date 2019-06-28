@@ -18,8 +18,8 @@ int Fib(int n)
 }
 } // namespace
 
-EchoServer::EchoServer(EventLoop *loop)
-    : server_(loop), loop_(loop), threadPool_(3)
+EchoServer::EchoServer(EventLoop *loop, const EndPoint &endpoint)
+    : server_(loop, endpoint), loop_(loop), threadPool_(3)
 {
     server_.SetConnectionCallback(
         std::bind(&EchoServer::OnConnection, this, _1));
@@ -36,7 +36,7 @@ void EchoServer::Start()
 
 void EchoServer::OnConnection(const TcpConnectionPtr &conn)
 {
-    cout << "onConnection" << endl;
+    cout << "OnConnection" << endl;
 }
 
 void EchoServer::OnMessage(const TcpConnectionPtr &conn,
@@ -56,7 +56,7 @@ void EchoServer::OnMessage(const TcpConnectionPtr &conn,
 
 void EchoServer::OnWriteComplete(const TcpConnectionPtr &conn)
 {
-    cout << "onWriteComplete" << endl;
+    cout << "OnWriteComplete" << endl;
 }
 
 void EchoServer::Run(int n, const TcpConnectionPtr &conn, const std::string &message)

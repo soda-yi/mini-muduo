@@ -1,5 +1,7 @@
 #include "epoll_poller.hh"
 
+#include <unistd.h>
+
 #include <cerrno>
 
 #include <iostream>
@@ -13,6 +15,7 @@ namespace
 {
 const int kNew = -1;
 const int kAdded = 1;
+const int kDeleted = 2;
 } // namespace
 
 EpollPoller::EpollPoller()
@@ -26,6 +29,7 @@ EpollPoller::EpollPoller()
 
 EpollPoller::~EpollPoller()
 {
+    ::close(epollfd_);
 }
 
 void EpollPoller::Poll(ChannelList *activeChannels)
@@ -51,10 +55,28 @@ void EpollPoller::UpdateChannel(Channel *channel)
     ev.data.ptr = channel;
     ev.events = channel->GetEvents();
     int fd = channel->GetFd();
-    if (index == kNew) {
+    if (index == kNew || index == kDeleted) {
         channel->SetIndex(kAdded);
         ::epoll_ctl(epollfd_, EPOLL_CTL_ADD, fd, &ev);
     } else {
-        ::epoll_ctl(epollfd_, EPOLL_CTL_MOD, fd, &ev);
+        if (channel->GetEvents() == 0) {
+            channel->SetIndex(kDeleted);
+            ::epoll_ctl(epollfd_, EPOLL_CTL_DEL, fd, &ev);
+        } else {
+            ::epoll_ctl(epollfd_, EPOLL_CTL_MOD, fd, &ev);
+        }
     }
+}
+
+void EpollPoller::RemoveChannel(Channel *channel)
+{
+    int index = channel->GetIndex();
+    struct epoll_event ev;
+    ev.data.ptr = channel;
+    ev.events = channel->GetEvents();
+    int fd = channel->GetFd();
+    if (index == kAdded) {
+        ::epoll_ctl(epollfd_, EPOLL_CTL_DEL, fd, &ev);
+    }
+    channel->SetIndex(kNew);
 }

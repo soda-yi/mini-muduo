@@ -3,7 +3,7 @@
 
 #include <atomic>
 
-#include "callback.hh"
+#include "callbacks.hh"
 #include "timestamp.hh"
 
 class Timer

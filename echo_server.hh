@@ -8,7 +8,7 @@
 class EchoServer
 {
 public:
-    EchoServer(EventLoop *loop);
+    EchoServer(EventLoop *loop, const EndPoint &endpoint);
 
     void Start(); // calls server_.start();
 
