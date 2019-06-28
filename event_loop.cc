@@ -15,6 +15,8 @@ using std::endl;
 
 EventLoop::EventLoop()
     : quit_(false),
+      callingPendingFunctors_(false),
+      threadId_(std::this_thread::get_id()),
       poller_(new EpollPoller()),
       timerQueue_(new TimerQueue(this)),
       wakeupfd_(::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)),
@@ -49,10 +51,24 @@ void EventLoop::UpdateChannel(Channel *channel)
     poller_->UpdateChannel(channel);
 }
 
-void EventLoop::QueueLoop(Functor functor)
+void EventLoop::RunInLoop(Functor functor)
 {
-    pendingFunctors_.push_back(functor);
-    WakeUp();
+    if (IsInLoopThread()) {
+        functor();
+    } else {
+        QueueInLoop(std::move(functor));
+    }
+}
+
+void EventLoop::QueueInLoop(Functor functor)
+{
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pendingFunctors_.push_back(functor);
+    }
+    if (!IsInLoopThread() || callingPendingFunctors_) {
+        WakeUp();
+    }
 }
 
 void EventLoop::WakeUp()
@@ -98,9 +114,16 @@ void EventLoop::CancelTimer(TimerId timerId)
 void EventLoop::DoPendingFunctors()
 {
     std::vector<Functor> functors;
-    functors.swap(pendingFunctors_);
+    callingPendingFunctors_ = true;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        functors.swap(pendingFunctors_);
+    }
 
     for (auto &functor : functors) {
         functor();
     }
+
+    callingPendingFunctors_ = false;
 }

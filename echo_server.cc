@@ -10,8 +10,16 @@ using std::endl;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
+namespace
+{
+int Fib(int n)
+{
+    return (n == 1 || n == 2) ? 1 : (Fib(n - 1) + Fib(n - 2));
+}
+} // namespace
+
 EchoServer::EchoServer(EventLoop *loop)
-    : server_(loop), loop_(loop)
+    : server_(loop), loop_(loop), threadPool_(3)
 {
     server_.SetConnectionCallback(
         std::bind(&EchoServer::OnConnection, this, _1));
@@ -35,12 +43,15 @@ void EchoServer::OnMessage(const TcpConnectionPtr &conn,
                            Buffer *data)
 {
     constexpr size_t kMessageLength = 8;
-    while (data->ReadableBytes() > kMessageLength) {
+
+    while (data->ReadableBytes() != 0) {
         std::string message = data->RetrieveAsString(kMessageLength);
-        conn->Send(message + "\n");
+        threadPool_.Commit(
+            [this](int n, const TcpConnectionPtr &conn, const std::string &message) {
+                Run(n, conn, message);
+            },
+            30, conn, message);
     }
-    conn->Send(data->RetrieveAllAsString() + "\n");
-    timerId_ = loop_->RunEvery(0.5, std::bind(&EchoServer::Run, this));
 }
 
 void EchoServer::OnWriteComplete(const TcpConnectionPtr &conn)
@@ -48,11 +59,9 @@ void EchoServer::OnWriteComplete(const TcpConnectionPtr &conn)
     cout << "onWriteComplete" << endl;
 }
 
-void EchoServer::Run()
+void EchoServer::Run(int n, const TcpConnectionPtr &conn, const std::string &message)
 {
-    cout << index_ << endl;
-    if (index_++ == 3) {
-        loop_->CancelTimer(timerId_);
-        index_ = 0;
-    }
+    //cout << "Fib(" << n << ") = " << Fib(30) << endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    conn->Send(message + "\n");
 }

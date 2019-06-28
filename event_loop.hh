@@ -1,8 +1,11 @@
 #ifndef EVENTLOOP_HH
 #define EVENTLOOP_HH
 
+#include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 #include "callback.hh"
@@ -22,7 +25,8 @@ public:
     ~EventLoop();
     void Loop();
     void UpdateChannel(Channel *channel);
-    void QueueLoop(Functor functor);
+    void QueueInLoop(Functor functor);
+    void RunInLoop(Functor functor);
     void HandleRead();
 
     TimerId RunAt(Timestamp when, TimerCallback cb);
@@ -33,12 +37,18 @@ public:
 private:
     void WakeUp();
     void DoPendingFunctors();
+    bool IsInLoopThread() { return std::this_thread::get_id() == threadId_; }
 
-    bool quit_;
+    std::atomic<bool> quit_;
+    std::atomic<bool> callingPendingFunctors_;
+    std::thread::id threadId_;
     std::unique_ptr<EpollPoller> poller_;
     std::unique_ptr<TimerQueue> timerQueue_;
+
     int wakeupfd_;
     std::unique_ptr<Channel> wakeupChannel_;
+
+    std::mutex mutex_;
     std::vector<Functor> pendingFunctors_;
 };
 

@@ -29,6 +29,8 @@ public:
     void SetWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
 
 private:
+    void SendInLoop(const std::string &message);
+
     EventLoop *loop_;
     int sockfd_;
     std::unique_ptr<Channel> channel_;

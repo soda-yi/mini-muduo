@@ -66,7 +66,7 @@ void TcpConnection::HandleWrite()
             outBuf_.Retrieve(n);
             if (outBuf_.ReadableBytes() == 0) {
                 channel_->DisableWriting();
-                loop_->QueueLoop([this] { writeCompleteCallback_(shared_from_this()); });
+                loop_->QueueInLoop([this] { writeCompleteCallback_(shared_from_this()); });
             }
         }
     }
@@ -74,13 +74,19 @@ void TcpConnection::HandleWrite()
 
 void TcpConnection::Send(const std::string &message)
 {
+    loop_->RunInLoop(std::bind(&TcpConnection::SendInLoop, this, message));
+}
+
+void TcpConnection::SendInLoop(const std::string &message)
+{
+    //cout << "SendInLoop thread: " << std::this_thread::get_id() << endl;
     int n = 0;
     if (outBuf_.ReadableBytes() == 0) {
         n = ::write(sockfd_, message.c_str(), message.size());
         if (n < 0) {
             cout << "write error" << endl;
         } else if (n == static_cast<int>(message.size())) {
-            loop_->QueueLoop([this] { writeCompleteCallback_(shared_from_this()); });
+            loop_->QueueInLoop([this] { writeCompleteCallback_(shared_from_this()); });
         }
     }
     if (n < static_cast<int>(message.size())) {

@@ -1,5 +1,7 @@
 #include "buffer.hh"
 
+#include <algorithm>
+
 using std::string;
 
 const char *Buffer::Peek() const
@@ -29,6 +31,7 @@ string Buffer::RetrieveAllAsString()
 
 string Buffer::RetrieveAsString(size_t len)
 {
+    len = std::min(len, buf_.size());
     string result(Peek(), len);
     Retrieve(len);
     return result;

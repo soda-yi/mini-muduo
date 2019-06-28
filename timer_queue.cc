@@ -94,13 +94,13 @@ void TimerQueue::doCancelTimer(TimerId timerId)
 TimerId TimerQueue::AddTimer(TimerCallback cb, Timestamp when, double interval)
 {
     Timer *timer = new Timer(cb, when, interval); //Memory Leak !!!
-    loop_->QueueLoop(std::bind(&TimerQueue::doAddTimer, this, timer));
+    loop_->QueueInLoop(std::bind(&TimerQueue::doAddTimer, this, timer));
     return TimerId(timer, timer->GetSequence());
 }
 
 void TimerQueue::CancelTimer(TimerId timerId)
 {
-    loop_->QueueLoop(std::bind(&TimerQueue::doCancelTimer, this, timerId));
+    loop_->QueueInLoop(std::bind(&TimerQueue::doCancelTimer, this, timerId));
 }
 
 void TimerQueue::HandleRead()
