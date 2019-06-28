@@ -13,7 +13,7 @@ RM := rm -f
 PS=cc
 # GNU Make的隐含变量定义
 CC=g++
-CPPFLAGS = -g -Wall -O3 -march=native
+CPPFLAGS = -g -Wall -O3 -march=native -std=c++11
 CPPFLAGS += $(addprefix -I,$(INCLUDES))
 CPPFLAGS += -MMD
 

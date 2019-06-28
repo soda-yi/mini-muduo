@@ -39,6 +39,7 @@ void EchoServer::OnMessage(const TcpConnectionPtr &conn,
         std::string message = data->RetrieveAsString(kMessageLength);
         conn->Send(message + "\n");
     }
+    conn->Send(data->RetrieveAllAsString() + "\n");
     timerId_ = loop_->RunEvery(0.5, std::bind(&EchoServer::Run, this));
 }
 
