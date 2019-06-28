@@ -33,6 +33,7 @@ public:
     void SetCloseCallback(const CloseCallback &cb) { closeCallback_ = cb; }
 
     EventLoop *GetLoop() const { return loop_; }
+    int GetSockfd() const { return sockfd_; }
 
 private:
     enum StateE { kDisconnected,

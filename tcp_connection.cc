@@ -92,7 +92,7 @@ void TcpConnection::Send(const std::string &message)
 
 void TcpConnection::SendInLoop(const std::string &message)
 {
-    //cout << "SendInLoop thread: " << std::this_thread::get_id() << endl;
+    //cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
     int n = 0;
     if (outBuf_.ReadableBytes() == 0) {
         n = ::write(sockfd_, message.c_str(), message.size());

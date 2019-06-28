@@ -49,6 +49,14 @@ void EventLoop::Loop()
     }
 }
 
+void EventLoop::Quit()
+{
+    quit_ = true;
+    if (!IsInLoopThread()) {
+        WakeUp();
+    }
+}
+
 void EventLoop::UpdateChannel(Channel *channel)
 {
     poller_->UpdateChannel(channel);

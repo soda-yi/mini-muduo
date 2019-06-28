@@ -24,6 +24,7 @@ public:
     EventLoop();
     ~EventLoop();
     void Loop();
+    void Quit();
     void UpdateChannel(Channel *channel);
     void RemoveChannel(Channel *channel);
     void QueueInLoop(Functor functor);
