@@ -54,7 +54,9 @@ void Acceptor::HandleRead()
     fcntl(connfd, F_SETFL, O_NONBLOCK); //no-block io
 
     EndPoint endpoint{inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port)};
-    newConnectionCallback_(connfd, endpoint);
+    if (newConnectionCallback_) {
+        newConnectionCallback_(connfd, endpoint);
+    }
 }
 
 void Acceptor::Listen()

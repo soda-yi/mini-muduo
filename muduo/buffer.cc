@@ -36,3 +36,9 @@ string Buffer::RetrieveAsString(size_t len)
     Retrieve(len);
     return result;
 }
+
+const char *Buffer::Find(const std::string &str) const
+{
+    auto it = std::search(buf_.cbegin(), buf_.cend(), str.begin(), str.end());
+    return it == buf_.end() ? nullptr : &*it;
+}

@@ -68,7 +68,7 @@ void TcpConnection::HandleWrite()
             outBuf_.Retrieve(n);
             if (outBuf_.ReadableBytes() == 0) {
                 channel_->DisableWriting();
-                loop_->QueueInLoop([this] { writeCompleteCallback_(shared_from_this()); });
+                loop_->QueueInLoop([this] { if(writeCompleteCallback_) {writeCompleteCallback_(shared_from_this());} });
             }
         }
     }
@@ -80,9 +80,13 @@ void TcpConnection::HandleClose()
     channel_->DisableAll();
 
     TcpConnectionPtr guardThis(shared_from_this());
-    connectionCallback_(guardThis);
+    if (connectionCallback_) {
+        connectionCallback_(guardThis);
+    }
     // must be the last line
-    closeCallback_(guardThis);
+    if (closeCallback_) {
+        closeCallback_(guardThis);
+    }
 }
 
 void TcpConnection::Send(const std::string &message)
@@ -99,7 +103,7 @@ void TcpConnection::SendInLoop(const std::string &message)
         if (n < 0) {
             cout << "write error" << endl;
         } else if (n == static_cast<int>(message.size())) {
-            loop_->QueueInLoop([this] { writeCompleteCallback_(shared_from_this()); });
+            loop_->QueueInLoop([this] { if(writeCompleteCallback_) {writeCompleteCallback_(shared_from_this());} });
         }
     }
     if (n < static_cast<int>(message.size())) {
@@ -133,6 +137,7 @@ void TcpConnection::ForceClose()
 void TcpConnection::ConnectEstablished()
 {
     if (connectionCallback_) {
+        state_ = kConnected;
         connectionCallback_(shared_from_this());
     }
 }
@@ -143,7 +148,9 @@ void TcpConnection::ConnectDestroyed()
         state_ = kDisconnected;
         channel_->DisableAll();
 
-        connectionCallback_(shared_from_this());
+        if (connectionCallback_) {
+            connectionCallback_(shared_from_this());
+        }
     }
     channel_->Remove();
 }

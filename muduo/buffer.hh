@@ -13,6 +13,7 @@ public:
     void Append(const std::string &buf);
     std::string RetrieveAllAsString();
     std::string RetrieveAsString(size_t len);
+    const char *Find(const std::string &str) const;
 
 private:
     std::vector<char> buf_;

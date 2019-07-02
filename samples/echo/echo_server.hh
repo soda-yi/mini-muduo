@@ -1,9 +1,9 @@
-#ifndef ECHO_SERVER_HH
-#define ECHO_SERVER_HH
+#ifndef SAMPLE_ECHO_ECHO_SERVER_HH
+#define SAMPLE_ECHO_ECHO_SERVER_HH
 
-#include "tcp_server.hh"
-#include "thread_pool.hh"
-#include "timer_id.hh"
+#include "muduo/tcp_server.hh"
+#include "muduo/thread_pool.hh"
+#include "muduo/timer_id.hh"
 
 class EchoServer
 {

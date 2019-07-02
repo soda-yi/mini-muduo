@@ -31,6 +31,10 @@ public:
     void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
     void SetWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
     void SetCloseCallback(const CloseCallback &cb) { closeCallback_ = cb; }
+    template <typename T>
+    void SetContext(std::shared_ptr<T> context) { context_ = context; }
+    template <typename T>
+    std::shared_ptr<T> GetContext() { return std::static_pointer_cast<T>(context_); }
 
     EventLoop *GetLoop() const { return loop_; }
     int GetSockfd() const { return sockfd_; }
@@ -56,6 +60,7 @@ private:
     CloseCallback closeCallback_;
     Buffer inBuf_;
     Buffer outBuf_;
+    std::shared_ptr<void> context_;
 };
 
 #endif
