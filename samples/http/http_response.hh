@@ -36,7 +36,7 @@ public:
 private:
     std::map<std::string, std::string> headers_;
     HttpStatusCode statusCode_;
-    // FIXME: add http version
+    // TODO add http version
     std::string statusMessage_;
     bool closeConnection_;
     std::string body_;

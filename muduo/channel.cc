@@ -4,17 +4,13 @@
 
 #include <sys/epoll.h>
 
-Channel::Channel(EventLoop *loop, int sockfd)
-    : loop_(loop),
-      fd_(sockfd)
+Channel::Channel(EventLoop *loop, int sockfd) noexcept
+    : loop_{loop},
+      fd_{sockfd}
 {
 }
 
-Channel::~Channel()
-{
-}
-
-void Channel::HandleEvent()
+void Channel::HandleEvent() const
 {
     if (revents_ & EPOLLIN) {
         if (readCallback_) {
@@ -33,53 +29,53 @@ void Channel::HandleEvent()
     }
 }
 
-void Channel::EnableReading()
+void Channel::EnableReading() noexcept
 {
     events_ |= EPOLLIN;
     Update();
 }
 
-void Channel::DisableReading()
+void Channel::DisableReading() noexcept
 {
     events_ &= ~EPOLLIN;
     Update();
 }
 
-void Channel::EnableWriting()
+void Channel::EnableWriting() noexcept
 {
     events_ |= EPOLLOUT;
     Update();
 }
 
-void Channel::DisableWriting()
+void Channel::DisableWriting() noexcept
 {
     events_ &= ~EPOLLOUT;
     Update();
 }
 
-void Channel::DisableAll()
+void Channel::DisableAll() noexcept
 {
     events_ = 0;
     Update();
 }
 
-bool Channel::IsWriting() const
+bool Channel::IsWriting() const noexcept
 {
     return events_ & EPOLLOUT;
 }
 
-bool Channel::IsReading() const
+bool Channel::IsReading() const noexcept
 {
     return events_ & EPOLLIN;
 }
 
 /* 具体实现中涉及epoll的操作，所以将实现置于poller中 */
-void Channel::Update()
+void Channel::Update() noexcept
 {
     loop_->UpdateChannel(this);
 }
 
-void Channel::Remove()
+void Channel::Remove() noexcept
 {
     loop_->RemoveChannel(this);
 }

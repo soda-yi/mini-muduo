@@ -6,34 +6,32 @@
 #include <iostream>
 #include <vector>
 
-#include "channel.hh"
-#include "epoll_poller.hh"
 #include "timer_queue.hh"
 
 using std::cout;
 using std::endl;
 
 EventLoop::EventLoop()
-    : quit_(false),
-      callingPendingFunctors_(false),
-      threadId_(std::this_thread::get_id()),
-      poller_(new EpollPoller()),
-      timerQueue_(new TimerQueue(this)),
-      wakeupfd_(::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)),
-      wakeupChannel_(new Channel(this, wakeupfd_))
+    : quit_{false},
+      callingPendingFunctors_{false},
+      threadId_{std::this_thread::get_id()},
+      poller_{},
+      timerQueue_(std::make_unique<TimerQueue>(this)),
+      wakeupfd_{::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)},
+      wakeupChannel_{this, wakeupfd_}
 {
     if (wakeupfd_ < 0) {
         cout << "Failed in eventfd" << endl;
-        abort();
+        return;
     }
-    wakeupChannel_->SetReadCallback(std::bind(&EventLoop::HandleRead, this));
-    wakeupChannel_->EnableReading();
+    wakeupChannel_.SetReadCallback([this] { HandleRead(); });
+    wakeupChannel_.EnableReading();
 }
 
 EventLoop::~EventLoop()
 {
-    wakeupChannel_->DisableAll();
-    wakeupChannel_->Remove();
+    wakeupChannel_.DisableAll();
+    wakeupChannel_.Remove();
     ::close(wakeupfd_);
 }
 
@@ -41,7 +39,7 @@ void EventLoop::Loop()
 {
     while (!quit_) {
         std::vector<Channel *> activeChannels;
-        poller_->Poll(&activeChannels);
+        poller_.Poll(&activeChannels);
         for (auto &channel : activeChannels) {
             channel->HandleEvent();
         }
@@ -49,7 +47,7 @@ void EventLoop::Loop()
     }
 }
 
-void EventLoop::Quit()
+void EventLoop::Quit() noexcept
 {
     quit_ = true;
     if (!IsInLoopThread()) {
@@ -57,14 +55,14 @@ void EventLoop::Quit()
     }
 }
 
-void EventLoop::UpdateChannel(Channel *channel)
+void EventLoop::UpdateChannel(Channel *channel) const noexcept
 {
-    poller_->UpdateChannel(channel);
+    poller_.UpdateChannel(channel);
 }
 
-void EventLoop::RemoveChannel(Channel *channel)
+void EventLoop::RemoveChannel(Channel *channel) const noexcept
 {
-    poller_->RemoveChannel(channel);
+    poller_.RemoveChannel(channel);
 }
 
 void EventLoop::RunInLoop(Functor functor)
@@ -79,7 +77,7 @@ void EventLoop::RunInLoop(Functor functor)
 void EventLoop::QueueInLoop(Functor functor)
 {
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock<std::mutex> lock(mutex_);
         pendingFunctors_.push_back(functor);
     }
     if (!IsInLoopThread() || callingPendingFunctors_) {
@@ -87,7 +85,7 @@ void EventLoop::QueueInLoop(Functor functor)
     }
 }
 
-void EventLoop::WakeUp()
+void EventLoop::WakeUp() const noexcept
 {
     uint64_t one = 1;
     ssize_t n = ::write(wakeupfd_, &one, sizeof(one));
@@ -96,7 +94,7 @@ void EventLoop::WakeUp()
     }
 }
 
-void EventLoop::HandleRead()
+void EventLoop::HandleRead() const noexcept
 {
     uint64_t one = 1;
     ssize_t n = ::read(wakeupfd_, &one, sizeof(one));
@@ -133,7 +131,7 @@ void EventLoop::DoPendingFunctors()
     callingPendingFunctors_ = true;
 
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock<std::mutex> lock(mutex_);
         functors.swap(pendingFunctors_);
     }
 

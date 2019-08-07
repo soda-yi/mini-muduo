@@ -6,13 +6,12 @@
 #include <map>
 #include <memory>
 
+#include "acceptor.hh"
 #include "callbacks.hh"
+#include "event_loop.hh"
 #include "network.hh"
+#include "tcp_connection.hh"
 
-class Acceptor;
-class Channel;
-class EventLoop;
-class TcpConnection;
 class EventLoopThreadPool;
 
 class TcpServer
@@ -20,23 +19,29 @@ class TcpServer
 public:
     using ThreadInitCallback = std::function<void(EventLoop *)>;
     TcpServer(EventLoop *loop, const EndPoint &endpoint);
+    TcpServer(const TcpServer &) = delete;
+    TcpServer &operator=(const TcpServer &) = delete;
+    // FIXME 移动构造不能是默认的
+    TcpServer(TcpServer &&) = default;
+    TcpServer &operator=(TcpServer &&) = default;
     ~TcpServer();
 
     void Start();
+
+    void SetConnectionCallback(ConnectionCallback cb) { connectionCallback_ = std::move(cb); }
+    void SetMessageCallback(MessageCallback cb) { messageCallback_ = std::move(cb); }
+    void SetWriteCompleteCallback(WriteCompleteCallback cb) { writeCompleteCallback_ = std::move(cb); }
+    void SetCloseCallback(CloseCallback cb) { closeCallback_ = std::move(cb); }
+    void SetThreadInitCallback(ThreadInitCallback cb) { threadInitCallback_ = std::move(cb); }
+    void SetThreadNum(int numThreads);
+
+private:
     void NewConnection(int sockfd, const EndPoint &endpoint);
     void RemoveConnection(const TcpConnectionPtr &conn);
     void RemoveConnectionInLoop(const TcpConnectionPtr &conn);
 
-    void SetConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; }
-    void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
-    void SetWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
-    void SetCloseCallback(const CloseCallback &cb) { closeCallback_ = cb; }
-    void SetThreadInitCallback(const ThreadInitCallback &cb) { threadInitCallback_ = cb; }
-    void SetThreadNum(int numThreads);
-
-private:
     EventLoop *loop_;
-    std::unique_ptr<Acceptor> acceptor_;
+    Acceptor acceptor_;
     std::shared_ptr<EventLoopThreadPool> threadPool_;
     std::map<int, TcpConnectionPtr> connections_;
     ConnectionCallback connectionCallback_;

@@ -40,7 +40,7 @@ void HttpServer::OnConnection(const TcpConnectionPtr &conn)
 
 void HttpServer::OnMessage(const TcpConnectionPtr &conn, Buffer *buf)
 {
-    auto context = conn->GetContext<HttpContext>();
+    auto context = std::any_cast<std::shared_ptr<HttpContext>>(conn->GetContext());
 
     // if (!detail::parseRequest(buf, context, receiveTime))
     if (!context->ParseRequest(buf)) {

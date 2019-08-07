@@ -1,7 +1,11 @@
 .vscode/
+.cache/
+out/
 
 build/
 
-*.o
-*.d
-echo-server
+GPATH
+GRTAGS
+GTAGS
+
+Doxyfile

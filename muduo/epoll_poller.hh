@@ -5,18 +5,24 @@
 
 #include <vector>
 
-class Channel;
+#include "channel.hh"
 
 class EpollPoller
 {
 public:
     using ChannelList = std::vector<Channel *>;
 
-    EpollPoller();
+    EpollPoller() noexcept;
+    EpollPoller(const EpollPoller &) = delete;
+    EpollPoller &operator=(const EpollPoller &) = delete;
+    // FIXME 移动构造不能是默认的
+    EpollPoller(EpollPoller &&) = default;
+    EpollPoller &operator=(EpollPoller &&) = default;
     ~EpollPoller();
+
     void Poll(ChannelList *activeChannels);
-    void UpdateChannel(Channel *channel);
-    void RemoveChannel(Channel *channel);
+    void UpdateChannel(Channel *channel) const noexcept;
+    void RemoveChannel(Channel *channel) const noexcept;
 
 private:
     using EventList = std::vector<struct epoll_event>;

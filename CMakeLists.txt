@@ -1,9 +1,10 @@
+cmake_minimum_required(VERSION 3.10)
 project(mini-muduo)
 
 set(CXX_FLAGS
  -g
  -Wall
- -std=c++11
+ -std=c++17
  )
 string(REPLACE ";" " " CMAKE_CXX_FLAGS "${CXX_FLAGS}")
 

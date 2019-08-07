@@ -32,7 +32,7 @@ string Buffer::RetrieveAllAsString()
 string Buffer::RetrieveAsString(size_t len)
 {
     len = std::min(len, buf_.size());
-    string result(Peek(), len);
+    string result{Peek(), len};
     Retrieve(len);
     return result;
 }

@@ -1,23 +1,29 @@
 #ifndef TCPCONNECTION_HH
 #define TCPCONNECTION_HH
 
+#include <any>
 #include <memory>
 #include <string>
 
 #include "buffer.hh"
 #include "callbacks.hh"
+#include "channel.hh"
 
 class EventLoop;
-class Channel;
 
 class TcpConnection : public std::enable_shared_from_this<TcpConnection>
 {
 public:
-    TcpConnection(EventLoop *loop, int sockfd);
+    TcpConnection(EventLoop *loop, int sockfd) noexcept;
+    TcpConnection(const TcpConnection &) = delete;
+    TcpConnection &operator=(const TcpConnection &) = delete;
+    // FIXME 移动构造不能是默认的
+    TcpConnection(TcpConnection &&) = default;
+    TcpConnection &operator=(TcpConnection &&) = default;
     ~TcpConnection();
 
-    bool IsConnected() const { return state_ == kConnected; }
-    bool IsDisConnected() const { return state_ == kDisconnected; }
+    bool IsConnected() const noexcept { return state_ == StateE::kConnected; }
+    bool IsDisConnected() const noexcept { return state_ == StateE::kDisconnected; }
 
     /* 对外提供的发送接口，用户调用后不用关心是否发送完毕 */
     void Send(const std::string &message);
@@ -27,23 +33,21 @@ public:
     void ConnectEstablished();
     void ConnectDestroyed();
 
-    void SetConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; }
-    void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
-    void SetWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
-    void SetCloseCallback(const CloseCallback &cb) { closeCallback_ = cb; }
-    template <typename T>
-    void SetContext(std::shared_ptr<T> context) { context_ = context; }
-    template <typename T>
-    std::shared_ptr<T> GetContext() { return std::static_pointer_cast<T>(context_); }
+    void SetConnectionCallback(ConnectionCallback cb) noexcept { connectionCallback_ = std::move(cb); }
+    void SetMessageCallback(MessageCallback cb) noexcept { messageCallback_ = std::move(cb); }
+    void SetWriteCompleteCallback(WriteCompleteCallback cb) noexcept { writeCompleteCallback_ = std::move(cb); }
+    void SetCloseCallback(CloseCallback cb) noexcept { closeCallback_ = std::move(cb); }
+    void SetContext(std::any context) noexcept { context_ = std::move(context); }
+    std::any &GetContext() noexcept { return context_; }
 
-    EventLoop *GetLoop() const { return loop_; }
-    int GetSockfd() const { return sockfd_; }
+    EventLoop *GetLoop() const noexcept { return loop_; }
+    int GetSockfd() const noexcept { return sockfd_; }
 
 private:
-    enum StateE { kDisconnected,
-                  kConnecting,
-                  kConnected,
-                  kDisconnecting };
+    enum class StateE : char { kDisconnected,
+                               kConnecting,
+                               kConnected,
+                               kDisconnecting };
     void HandleRead();
     /* 用来发送输出缓冲区中剩余的字节 */
     void HandleWrite();
@@ -53,14 +57,14 @@ private:
     EventLoop *loop_;
     StateE state_;
     int sockfd_;
-    std::unique_ptr<Channel> channel_;
+    Channel channel_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
     WriteCompleteCallback writeCompleteCallback_;
     CloseCallback closeCallback_;
     Buffer inBuf_;
     Buffer outBuf_;
-    std::shared_ptr<void> context_;
+    std::any context_;
 };
 
 #endif

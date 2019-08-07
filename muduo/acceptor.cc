@@ -3,16 +3,17 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include <iostream>
 
 using std::cout;
 using std::endl;
 
-Acceptor::Acceptor(EventLoop *loop, const EndPoint &endpoint)
-    : loop_(loop),
-      listenfd_(socket(AF_INET, SOCK_STREAM, 0)),
-      acceptChannel_(loop_, listenfd_)
+Acceptor::Acceptor(EventLoop *loop, const EndPoint &endpoint) noexcept
+    : loop_{loop},
+      listenfd_{socket(AF_INET, SOCK_STREAM, 0)},
+      acceptChannel_{loop_, listenfd_}
 {
     int on = 1;
     struct sockaddr_in servaddr;
@@ -26,21 +27,20 @@ Acceptor::Acceptor(EventLoop *loop, const EndPoint &endpoint)
         cout << "bind error, errno:" << errno << endl;
     }
 
-    acceptChannel_.SetReadCallback(std::bind(&Acceptor::HandleRead, this));
+    acceptChannel_.SetReadCallback([this] { HandleRead(); });
 }
 
 Acceptor::~Acceptor()
 {
-    acceptChannel_.DisableAll();
     acceptChannel_.Remove();
+    ::close(listenfd_);
 }
 
-void Acceptor::HandleRead()
+void Acceptor::HandleRead() const
 {
-    int connfd;
     struct sockaddr_in cliaddr;
     socklen_t clilen = sizeof(struct sockaddr_in);
-    connfd = accept(listenfd_, (sockaddr *)&cliaddr, (socklen_t *)&clilen);
+    int connfd = accept(listenfd_, (sockaddr *)&cliaddr, (socklen_t *)&clilen);
     if (connfd > 0) {
         cout << "new connection from "
              << "[" << inet_ntoa(cliaddr.sin_addr)

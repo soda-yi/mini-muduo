@@ -5,42 +5,137 @@
 
 class EventLoop;
 
+/**
+ * @brief Channel类，Handle（资源）的实现
+ * 
+ * 管理一个fd，用于管理系统底层资源，但不持有它
+ * 本类的实例一般由EventHandle持有，生存期和该EventHandle相同
+ */
 class Channel
 {
 public:
+    /**
+     * @brief Channel状态的枚举类
+     * 
+     * 三个Channel的状态，只在Channel执行Update、Remove操作时改变 @see ::Update::Remove
+     */
+    enum class State : char {
+        kNew,   /**< Channel是新建的或是已经被删除（EPOLL_CTL_DEL），fd还未加入epoll中 */
+        kAdded, /**< Channel已经加入epoll中（EPOLL_CTL_ADD） */
+    };
+
+public:
+    /**
+     * @brief 各种事件的回调接口
+     * 
+     * 事件的回调接口，包括了读、写、关闭事件
+     */
     using EventCallback = std::function<void()>;
 
-    Channel(EventLoop *loop, int sockfd);
-    ~Channel();
+    /**
+     * @brief 通过loop和fd构造Channel对象
+     * 
+     * @param loop 所属的EventLoop
+     * @param fd 文件描述符，可以是sockfd、eventfd、timerfd等，通常由持有本对象的对象直接生成并提供
+     */
+    Channel(EventLoop *loop, int fd) noexcept;
+    Channel(const Channel &) = delete;
+    Channel &operator=(const Channel &) = delete;
+    Channel(Channel &&) = default;
+    Channel &operator=(Channel &&) = default;
 
-    void SetReadCallback(EventCallback cb) { readCallback_ = std::move(cb); }
-    void SetWriteCallback(EventCallback cb) { writeCallback_ = std::move(cb); }
-    void SetCloseCallback(EventCallback cb) { closeCallback_ = std::move(cb); }
-    void SetRevents(int revent) { revents_ = revent; }
-    void SetIndex(int index) { index_ = index; }
-    int GetIndex() const { return index_; }
-    int GetFd() const { return fd_; }
-    int GetEvents() const { return events_; }
+    void SetReadCallback(EventCallback cb) noexcept { readCallback_ = std::move(cb); }
+    void SetWriteCallback(EventCallback cb) noexcept { writeCallback_ = std::move(cb); }
+    void SetCloseCallback(EventCallback cb) noexcept { closeCallback_ = std::move(cb); }
 
-    void EnableReading();
-    void DisableReading();
-    void EnableWriting();
-    void DisableWriting();
-    void DisableAll();
-    /* 判断events_中是否有EPOLLOUT，即是否对写感兴趣 */
-    bool IsWriting() const;
-    bool IsReading() const;
+    /**
+     * @brief 设置Channel持有的fd发生的事件
+     * 
+     * @param revent fd发生的事件，由Synchronous Event Demultiplexer（EpollPoller）等待后获得
+     */
+    void SetRevents(int revent) noexcept { revents_ = revent; }
+    void SetState(State state) noexcept { state_ = state; }
+    State GetState() const noexcept { return state_; }
+    int GetFd() const noexcept { return fd_; }
+    /**
+     * @brief 获取关心的事件
+     * 
+     * @return 关心的事件
+     */
+    int GetEvents() const noexcept { return events_; }
 
-    void HandleEvent();
-    void Update();
-    void Remove();
+    /**
+     * @brief 允许Channel读操作
+     * 
+     * 设置对读事件关心，并修改fd对应的epoll_event
+     */
+    void EnableReading() noexcept;
+    /**
+     * @brief 禁止Channel读操作
+     * 
+     * 设置对读事件不关心，并修改fd对应的epoll_event
+     */
+    void DisableReading() noexcept;
+    /**
+     * @brief 允许Channel写操作
+     * 
+     * 设置对写事件关心，并修改fd对应的epoll_event
+     */
+    void EnableWriting() noexcept;
+    /**
+     * @brief 禁止Channel写操作
+     * 
+     * 设置对写事件不关心，并修改fd对应的epoll_event
+     */
+    void DisableWriting() noexcept;
+    /**
+     * @brief 禁止Channel所有操作
+     * 
+     * 设置对读写事件不关心，将对应的fd从epoll移除，功能上等效于Remove @see ::Remove
+     */
+    void DisableAll() noexcept;
+
+    /**
+     * @brief 判断Channel是否对读事件关心
+     * 
+     * @return true 关心
+     * @return false 不关心
+     */
+    bool IsWriting() const noexcept;
+    /**
+     * @brief 判断Channel是否对写事件关心
+     * 
+     * @return true 关心
+     * @return false 不关心
+     */
+    bool IsReading() const noexcept;
+
+    /**
+     * @brief 处理发生的事件
+     * 
+     * 一次性处理完该Channel发生的事件，三种事件分别调用三种回调函数
+     */
+    void HandleEvent() const;
+    /**
+     * @brief 将Channel从其EventLoop对应的Poller中移除
+     * 
+     * 将对应的fd从epoll移除，功能上等效于DisableAll @see ::DisableAll
+     */
+    void Remove() noexcept;
 
 private:
+    /**
+     * @brief 在Poller中更新关心的事件
+     * 
+     * 更新关心的事件，所有设置读写状态的方法都要调用它
+     */
+    void Update() noexcept;
+
     EventLoop *loop_;
     int fd_;
-    int events_ = 0;  // 关注的事件
-    int revents_ = 0; // 发生的事件
-    int index_ = -1;
+    int events_ = 0;  /**< 关注的事件 */
+    int revents_ = 0; /**< 发生的事件 */
+    State state_ = State::kNew;
     EventCallback readCallback_ = nullptr;
     EventCallback writeCallback_ = nullptr;
     EventCallback closeCallback_ = nullptr;

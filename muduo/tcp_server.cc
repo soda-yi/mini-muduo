@@ -20,11 +20,12 @@ using std::cout;
 using std::endl;
 
 TcpServer::TcpServer(EventLoop *loop, const EndPoint &endpoint)
-    : loop_(loop),
-      acceptor_(new Acceptor(loop_, endpoint)),
-      threadPool_(new EventLoopThreadPool(loop_))
+    : loop_{loop},
+      acceptor_{loop_, endpoint},
+      threadPool_{std::make_shared<EventLoopThreadPool>(loop_)}
 {
-    acceptor_->SetNewConnectionCallback(std::bind(&TcpServer::NewConnection, this, std::placeholders::_1, std::placeholders::_2));
+    acceptor_.SetNewConnectionCallback(
+        [this](int sockfd, const EndPoint &endpoint) { NewConnection(sockfd, endpoint); });
 }
 
 TcpServer::~TcpServer()
@@ -33,7 +34,7 @@ TcpServer::~TcpServer()
         TcpConnectionPtr conn(item.second);
         item.second.reset();
         conn->GetLoop()->RunInLoop(
-            std::bind(&TcpConnection::ConnectDestroyed, conn));
+            [conn] { conn->ConnectDestroyed(); });
     }
 }
 
@@ -50,25 +51,25 @@ void TcpServer::NewConnection(int sockfd, const EndPoint &endpoint)
     tcpConnection->SetConnectionCallback(connectionCallback_);
     tcpConnection->SetMessageCallback(messageCallback_);
     tcpConnection->SetWriteCompleteCallback(writeCompleteCallback_);
-    tcpConnection->SetCloseCallback(std::bind(&TcpServer::RemoveConnection, this, std::placeholders::_1));
-    ioLoop->RunInLoop([&tcpConnection] { tcpConnection->ConnectEstablished(); });
+    tcpConnection->SetCloseCallback([this](const TcpConnectionPtr &conn) { RemoveConnection(conn); });
+    ioLoop->RunInLoop([tcpConnection] { tcpConnection->ConnectEstablished(); });
     //cout << "Main Loop thread: " << std::this_thread::get_id() << endl;
 }
 
 void TcpServer::RemoveConnection(const TcpConnectionPtr &conn)
 {
-    loop_->RunInLoop(std::bind(&TcpServer::RemoveConnectionInLoop, this, conn));
+    loop_->RunInLoop([this, conn] { RemoveConnectionInLoop(conn); });
 }
 
 void TcpServer::RemoveConnectionInLoop(const TcpConnectionPtr &conn)
 {
     connections_.erase(conn->GetSockfd());
     EventLoop *ioLoop = conn->GetLoop();
-    ioLoop->QueueInLoop(std::bind(&TcpConnection::ConnectDestroyed, conn));
+    ioLoop->QueueInLoop([conn] { conn->ConnectDestroyed(); });
 }
 
 void TcpServer::Start()
 {
     threadPool_->Start(threadInitCallback_);
-    loop_->RunInLoop([this] { acceptor_->Listen(); });
+    loop_->RunInLoop([this] { acceptor_.Listen(); });
 }

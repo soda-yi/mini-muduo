@@ -11,14 +11,7 @@
 using std::cout;
 using std::endl;
 
-namespace
-{
-const int kNew = -1;
-const int kAdded = 1;
-const int kDeleted = 2;
-} // namespace
-
-EpollPoller::EpollPoller()
+EpollPoller::EpollPoller() noexcept
     : epollfd_(::epoll_create1(EPOLL_CLOEXEC)),
       events_(kMaxEvents)
 {
@@ -48,35 +41,35 @@ void EpollPoller::Poll(ChannelList *activeChannels)
     }
 }
 
-void EpollPoller::UpdateChannel(Channel *channel)
+void EpollPoller::UpdateChannel(Channel *channel) const noexcept
 {
-    int index = channel->GetIndex();
+    auto state = channel->GetState();
     struct epoll_event ev;
     ev.data.ptr = channel;
     ev.events = channel->GetEvents();
     int fd = channel->GetFd();
-    if (index == kNew || index == kDeleted) {
-        channel->SetIndex(kAdded);
-        ::epoll_ctl(epollfd_, EPOLL_CTL_ADD, fd, &ev);
+    if (channel->GetEvents() == 0) {
+        channel->SetState(Channel::State::kNew);
+        ::epoll_ctl(epollfd_, EPOLL_CTL_DEL, fd, &ev);
     } else {
-        if (channel->GetEvents() == 0) {
-            channel->SetIndex(kDeleted);
-            ::epoll_ctl(epollfd_, EPOLL_CTL_DEL, fd, &ev);
+        if (state == Channel::State::kNew) {
+            channel->SetState(Channel::State::kAdded);
+            ::epoll_ctl(epollfd_, EPOLL_CTL_ADD, fd, &ev);
         } else {
             ::epoll_ctl(epollfd_, EPOLL_CTL_MOD, fd, &ev);
         }
     }
 }
 
-void EpollPoller::RemoveChannel(Channel *channel)
+void EpollPoller::RemoveChannel(Channel *channel) const noexcept
 {
-    int index = channel->GetIndex();
+    auto state = channel->GetState();
     struct epoll_event ev;
     ev.data.ptr = channel;
     ev.events = channel->GetEvents();
     int fd = channel->GetFd();
-    if (index == kAdded) {
+    if (state == Channel::State::kAdded) {
         ::epoll_ctl(epollfd_, EPOLL_CTL_DEL, fd, &ev);
     }
-    channel->SetIndex(kNew);
+    channel->SetState(Channel::State::kNew);
 }
