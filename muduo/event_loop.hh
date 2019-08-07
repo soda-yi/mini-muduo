@@ -25,9 +25,9 @@ public:
     EventLoop();
     EventLoop(const EventLoop &) = delete;
     EventLoop &operator=(const EventLoop &) = delete;
-    // FIXME 移动构造不能是默认的
-    EventLoop(EventLoop &&) = default;
-    EventLoop &operator=(EventLoop &&) = default;
+    // TODO 为EventLoop编写移动操作
+    EventLoop(EventLoop &&);
+    EventLoop &operator=(EventLoop &&);
     ~EventLoop();
 
     void Loop();

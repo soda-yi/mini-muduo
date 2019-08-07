@@ -11,13 +11,31 @@
 using std::cout;
 using std::endl;
 
-EpollPoller::EpollPoller() noexcept
-    : epollfd_(::epoll_create1(EPOLL_CLOEXEC)),
-      events_(kMaxEvents)
+EpollPoller::EpollPoller()
+    : epollfd_{::epoll_create1(EPOLL_CLOEXEC)},
+      events_{kMaxEvents}
 {
     if (epollfd_ < 0) {
         cout << "epoll_create error, errno:" << epollfd_ << endl;
     }
+}
+
+EpollPoller::EpollPoller(EpollPoller &&rhs)
+    : epollfd_{rhs.epollfd_},
+      events_{std::move(rhs.events_)}
+{
+    rhs.epollfd_ = -1;
+}
+
+EpollPoller &EpollPoller::operator=(EpollPoller &&rhs)
+{
+    if (this != &rhs) {
+        epollfd_ = rhs.epollfd_;
+        events_ = std::move(events_);
+
+        rhs.epollfd_ = -1;
+    }
+    return *this;
 }
 
 EpollPoller::~EpollPoller()

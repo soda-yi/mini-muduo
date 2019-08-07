@@ -17,9 +17,8 @@ public:
     Acceptor(EventLoop *loop, const EndPoint &endpoint) noexcept;
     Acceptor(const Acceptor &) = delete;
     Acceptor &operator=(const Acceptor &) = delete;
-    // FIXME 移动构造不能是默认的
-    Acceptor(Acceptor &&) = default;
-    Acceptor &operator=(Acceptor &&) = default;
+    Acceptor(Acceptor &&) noexcept;
+    Acceptor &operator=(Acceptor &&) noexcept;
     ~Acceptor();
 
     void SetNewConnectionCallback(NewConnectionCallback cb) noexcept { newConnectionCallback_ = std::move(cb); }

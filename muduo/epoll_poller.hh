@@ -12,12 +12,11 @@ class EpollPoller
 public:
     using ChannelList = std::vector<Channel *>;
 
-    EpollPoller() noexcept;
+    EpollPoller();
     EpollPoller(const EpollPoller &) = delete;
     EpollPoller &operator=(const EpollPoller &) = delete;
-    // FIXME 移动构造不能是默认的
-    EpollPoller(EpollPoller &&) = default;
-    EpollPoller &operator=(EpollPoller &&) = default;
+    EpollPoller(EpollPoller &&);
+    EpollPoller &operator=(EpollPoller &&);
     ~EpollPoller();
 
     void Poll(ChannelList *activeChannels);

@@ -30,6 +30,31 @@ Acceptor::Acceptor(EventLoop *loop, const EndPoint &endpoint) noexcept
     acceptChannel_.SetReadCallback([this] { HandleRead(); });
 }
 
+Acceptor::Acceptor(Acceptor &&rhs) noexcept
+    : loop_{rhs.loop_},
+      listenfd_{rhs.listenfd_},
+      acceptChannel_{std::move(rhs.acceptChannel_)},
+      newConnectionCallback_(std::move(rhs.newConnectionCallback_))
+{
+    rhs.loop_ = nullptr;
+    rhs.listenfd_ = -1;
+}
+
+Acceptor &Acceptor::operator=(Acceptor &&rhs) noexcept
+{
+    if (&rhs != this) {
+        loop_ = rhs.loop_;
+        listenfd_ = rhs.listenfd_;
+        acceptChannel_ = std::move(rhs.acceptChannel_);
+        newConnectionCallback_ = std::move(rhs.newConnectionCallback_);
+
+        rhs.loop_ = nullptr;
+        rhs.listenfd_ = -1;
+    }
+
+    return *this;
+}
+
 Acceptor::~Acceptor()
 {
     acceptChannel_.Remove();
