@@ -11,6 +11,7 @@
 #include "callbacks.hh"
 #include "channel.hh"
 #include "epoll_poller.hh"
+#include "file_descriptor.hh"
 #include "timer_id.hh"
 #include "timestamp.hh"
 
@@ -25,18 +26,18 @@ public:
     EventLoop();
     EventLoop(const EventLoop &) = delete;
     EventLoop &operator=(const EventLoop &) = delete;
-    // TODO 为EventLoop编写移动操作
-    EventLoop(EventLoop &&);
-    EventLoop &operator=(EventLoop &&);
+    EventLoop(EventLoop &&) noexcept;
+    EventLoop &operator=(EventLoop &&) noexcept;
     ~EventLoop();
 
     void Loop();
     void Quit() noexcept;
-    void UpdateChannel(Channel *channel) const noexcept;
-    void RemoveChannel(Channel *channel) const noexcept;
+    void AddChannel(const Channel &channel) const { poller_.AddChannel(channel); }
+    void UpdateChannel(const Channel &channel) const { poller_.UpdateChannel(channel); }
+    void RemoveChannel(const Channel &channel) const { poller_.RemoveChannel(channel); }
     void QueueInLoop(Functor functor);
     void RunInLoop(Functor functor);
-    void HandleRead() const noexcept;
+    void HandleRead() const;
 
     [[deprecated]] TimerId RunAt(Timestamp when, TimerCallback cb);
     [[deprecated]] TimerId RunAfter(double delay, TimerCallback cb);
@@ -44,7 +45,7 @@ public:
     [[deprecated]] void CancelTimer(TimerId timerId);
 
 private:
-    void WakeUp() const noexcept;
+    void WakeUp() const;
     void DoPendingFunctors();
     bool IsInLoopThread() const noexcept { return std::this_thread::get_id() == threadId_; }
 
@@ -54,7 +55,7 @@ private:
     EpollPoller poller_;
     std::unique_ptr<TimerQueue> timerQueue_;
 
-    int wakeupfd_;
+    FileDescriptor wakeupfd_;
     Channel wakeupChannel_;
 
     std::mutex mutex_;

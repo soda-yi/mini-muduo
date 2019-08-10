@@ -10,21 +10,21 @@
 #include <functional>
 #include <iostream>
 
-#include "channel.hh"
 #include "event_loop.hh"
 
 using std::cout;
 using std::endl;
 
-TcpConnection::TcpConnection(EventLoop *loop, int sockfd) noexcept
+TcpConnection::TcpConnection(EventLoop *loop, sockets::Socket socket) noexcept
     : loop_{loop},
       state_{StateE::kConnecting},
-      sockfd_{sockfd},
-      channel_{loop_, sockfd_}
+      socket_{std::move(socket)},
+      channel_{loop_, socket_.GetFd()}
 {
     channel_.SetReadCallback([this] { HandleRead(); });
     channel_.SetWriteCallback([this] { HandleClose(); });
     channel_.SetCloseCallback([this] { HandleClose(); });
+    channel_.Add();
     channel_.EnableReading();
 }
 
@@ -32,34 +32,21 @@ TcpConnection::~TcpConnection()
 {
     state_ = StateE::kDisconnected;
     channel_.Remove();
-    ::close(sockfd_);
 }
 
 void TcpConnection::HandleRead()
 {
-    int sockfd = channel_.GetFd();
     constexpr int kMaxLength = 100;
-    int readlength;
     char line[kMaxLength];
-    if (sockfd < 0) {
-        cout << "EPOLLIN sockfd < 0 error " << endl;
-        return;
-    }
     ::bzero(line, kMaxLength);
-    if ((readlength = ::read(sockfd, line, kMaxLength)) < 0) {
-        if (errno == ECONNRESET) {
-            cout << "ECONNREST closed socket fd:" << sockfd << endl;
-            // FIXME 调用ConnectionDestroyed或ForceClose接口关闭
-            ::close(sockfd);
-        }
-    } else if (readlength == 0) {
-        cout << "read 0 closed socket fd:" << sockfd << endl;
-        // FIXME 调用ConnectionDestroyed或ForceClose接口关闭
-        ::close(sockfd);
-    } else {
+
+    try {
+        auto readlength = socket_.Read(line, sizeof(line));
         std::string linestr(line, readlength);
         inBuf_.Append(linestr);
         messageCallback_(shared_from_this(), &inBuf_);
+    } catch (const FdException &e) {
+        // TODO: 处理异常
     }
 }
 
@@ -96,7 +83,7 @@ void TcpConnection::HandleClose()
 
 void TcpConnection::Send(const std::string &message)
 {
-    loop_->RunInLoop([this, &message] { SendInLoop(message); });
+    loop_->RunInLoop([this, message] { SendInLoop(message); });
 }
 
 void TcpConnection::SendInLoop(const std::string &message)
@@ -104,10 +91,8 @@ void TcpConnection::SendInLoop(const std::string &message)
     //cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
     int n = 0;
     if (outBuf_.ReadableBytes() == 0) {
-        n = ::write(sockfd_, message.c_str(), message.size());
-        if (n < 0) {
-            cout << "write error" << endl;
-        } else if (n == static_cast<int>(message.size())) {
+        n = socket_.Write(message.c_str(), message.size());
+        if (n == static_cast<int>(message.size())) {
             loop_->QueueInLoop([this] { 
                 if(writeCompleteCallback_) { 
                     writeCompleteCallback_(shared_from_this());
@@ -128,7 +113,7 @@ void TcpConnection::Shutdown()
         state_ = StateE::kDisconnecting;
         loop_->RunInLoop([this] {
             if (!channel_.IsWriting()) {
-                ::shutdown(sockfd_, SHUT_WR);
+                socket_.ShutdownWrite();
             }
         });
     }
@@ -161,5 +146,5 @@ void TcpConnection::ConnectDestroyed()
         }
     }
     channel_.Remove();
-    ::close(sockfd_);
+    socket_.Close();
 }

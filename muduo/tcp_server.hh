@@ -21,7 +21,6 @@ public:
     TcpServer(EventLoop *loop, const EndPoint &endpoint);
     TcpServer(const TcpServer &) = delete;
     TcpServer &operator=(const TcpServer &) = delete;
-    // FIXME 移动构造不能是默认的
     TcpServer(TcpServer &&) = default;
     TcpServer &operator=(TcpServer &&) = default;
     ~TcpServer();
@@ -36,7 +35,7 @@ public:
     void SetThreadNum(int numThreads);
 
 private:
-    void NewConnection(int sockfd, const EndPoint &endpoint);
+    void NewConnection(sockets::Socket socket, const EndPoint &endpoint);
     void RemoveConnection(const TcpConnectionPtr &conn);
     void RemoveConnectionInLoop(const TcpConnectionPtr &conn);
 

@@ -8,22 +8,11 @@ class EventLoop;
 /**
  * @brief Channel类，Handle（资源）的实现
  * 
- * 管理一个fd，用于管理系统底层资源，但不持有它
+ * 管理一个fd，用于管理系统底层资源，但不持有它\n
  * 本类的实例一般由EventHandle持有，生存期和该EventHandle相同
  */
 class Channel
 {
-public:
-    /**
-     * @brief Channel状态的枚举类
-     * 
-     * 三个Channel的状态，只在Channel执行Update、Remove操作时改变 @see ::Update::Remove
-     */
-    enum class State : char {
-        kNew,   /**< Channel是新建的或是已经被删除（EPOLL_CTL_DEL），fd还未加入epoll中 */
-        kAdded, /**< Channel已经加入epoll中（EPOLL_CTL_ADD） */
-    };
-
 public:
     /**
      * @brief 各种事件的回调接口
@@ -54,8 +43,6 @@ public:
      * @param revent fd发生的事件，由Synchronous Event Demultiplexer（EpollPoller）等待后获得
      */
     void SetRevents(int revent) noexcept { revents_ = revent; }
-    void SetState(State state) noexcept { state_ = state; }
-    State GetState() const noexcept { return state_; }
     int GetFd() const noexcept { return fd_; }
     /**
      * @brief 获取关心的事件
@@ -67,33 +54,43 @@ public:
     /**
      * @brief 允许Channel读操作
      * 
+     * @warning 调用前需确保已经调用过Add
+     * 
      * 设置对读事件关心，并修改fd对应的epoll_event
      */
-    void EnableReading() noexcept;
+    void EnableReading();
     /**
      * @brief 禁止Channel读操作
      * 
+     * @warning 调用前需确保已经调用过Add
+     * 
      * 设置对读事件不关心，并修改fd对应的epoll_event
      */
-    void DisableReading() noexcept;
+    void DisableReading();
     /**
      * @brief 允许Channel写操作
      * 
+     * @warning 调用前需确保已经调用过Add
+     * 
      * 设置对写事件关心，并修改fd对应的epoll_event
      */
-    void EnableWriting() noexcept;
+    void EnableWriting();
     /**
      * @brief 禁止Channel写操作
      * 
+     * @warning 调用前需确保已经调用过Add
+     * 
      * 设置对写事件不关心，并修改fd对应的epoll_event
      */
-    void DisableWriting() noexcept;
+    void DisableWriting();
     /**
      * @brief 禁止Channel所有操作
      * 
-     * 设置对读写事件不关心，将对应的fd从epoll移除，功能上等效于Remove @see ::Remove
+     * @warning 调用前需确保已经调用过Add
+     * 
+     * 设置对读写事件不关心，但不将对应的fd从epoll移除，想恢复不用重新Add
      */
-    void DisableAll() noexcept;
+    void DisableAll();
 
     /**
      * @brief 判断Channel是否对读事件关心
@@ -113,23 +110,38 @@ public:
     /**
      * @brief 处理发生的事件
      * 
-     * 一次性处理完该Channel发生的事件，三种事件分别调用三种回调函数
+     * 一次性处理完该Channel发生的事件，三种事件分别调用三种回调函数\n
+     * 通常在Poller执行Poll得到发生事件的Channel后调用
      */
     void HandleEvent() const;
     /**
+     * @brief 添加Channel到EventLoop对应的Poller中
+     */
+    inline void Add() const;
+    /**
      * @brief 将Channel从其EventLoop对应的Poller中移除
      * 
-     * 将对应的fd从epoll移除，功能上等效于DisableAll @see ::DisableAll
+     * 将对应的fd从epoll移除，想要恢复需要重新Add
      */
-    void Remove() noexcept;
+    inline void Remove() const;
 
 private:
+    /**
+     * @brief Channel状态的枚举类
+     * 
+     * 三个Channel的状态，只在Channel执行Update、Remove操作时改变 @see ::Update::Remove
+     */
+    enum class State : char {
+        kNew,   /**< Channel是新建的或是已经被删除（EPOLL_CTL_DEL），fd还未加入epoll中 */
+        kAdded, /**< Channel已经加入epoll中（EPOLL_CTL_ADD） */
+    };
+
     /**
      * @brief 在Poller中更新关心的事件
      * 
      * 更新关心的事件，所有设置读写状态的方法都要调用它
      */
-    void Update() noexcept;
+    inline void Update() const;
 
     EventLoop *loop_;
     int fd_;

@@ -18,13 +18,10 @@ EventLoop::EventLoop()
       poller_{},
       timerQueue_(std::make_unique<TimerQueue>(this)),
       wakeupfd_{::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)},
-      wakeupChannel_{this, wakeupfd_}
+      wakeupChannel_{this, wakeupfd_.GetFd()}
 {
-    if (wakeupfd_ < 0) {
-        cout << "Failed in eventfd" << endl;
-        return;
-    }
     wakeupChannel_.SetReadCallback([this] { HandleRead(); });
+    wakeupChannel_.Add();
     wakeupChannel_.EnableReading();
 }
 
@@ -32,7 +29,6 @@ EventLoop::~EventLoop()
 {
     wakeupChannel_.DisableAll();
     wakeupChannel_.Remove();
-    ::close(wakeupfd_);
 }
 
 void EventLoop::Loop()
@@ -55,16 +51,6 @@ void EventLoop::Quit() noexcept
     }
 }
 
-void EventLoop::UpdateChannel(Channel *channel) const noexcept
-{
-    poller_.UpdateChannel(channel);
-}
-
-void EventLoop::RemoveChannel(Channel *channel) const noexcept
-{
-    poller_.RemoveChannel(channel);
-}
-
 void EventLoop::RunInLoop(Functor functor)
 {
     if (IsInLoopThread()) {
@@ -85,19 +71,19 @@ void EventLoop::QueueInLoop(Functor functor)
     }
 }
 
-void EventLoop::WakeUp() const noexcept
+void EventLoop::WakeUp() const
 {
     uint64_t one = 1;
-    ssize_t n = ::write(wakeupfd_, &one, sizeof(one));
+    ssize_t n = wakeupfd_.Write(&one, sizeof(one));
     if (n != sizeof(one)) {
         cout << "EventLoop::wakeup() writes " << n << " bytes instead of 8" << endl;
     }
 }
 
-void EventLoop::HandleRead() const noexcept
+void EventLoop::HandleRead() const
 {
     uint64_t one = 1;
-    ssize_t n = ::read(wakeupfd_, &one, sizeof(one));
+    ssize_t n = wakeupfd_.Read(&one, sizeof(one));
     if (n != sizeof(one)) {
         cout << "EventLoop::handleRead() reads " << n << " bytes instead of 8" << endl;
     }

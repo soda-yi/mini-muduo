@@ -29,31 +29,31 @@ void Channel::HandleEvent() const
     }
 }
 
-void Channel::EnableReading() noexcept
+void Channel::EnableReading()
 {
     events_ |= EPOLLIN;
     Update();
 }
 
-void Channel::DisableReading() noexcept
+void Channel::DisableReading()
 {
     events_ &= ~EPOLLIN;
     Update();
 }
 
-void Channel::EnableWriting() noexcept
+void Channel::EnableWriting()
 {
     events_ |= EPOLLOUT;
     Update();
 }
 
-void Channel::DisableWriting() noexcept
+void Channel::DisableWriting()
 {
     events_ &= ~EPOLLOUT;
     Update();
 }
 
-void Channel::DisableAll() noexcept
+void Channel::DisableAll()
 {
     events_ = 0;
     Update();
@@ -69,13 +69,18 @@ bool Channel::IsReading() const noexcept
     return events_ & EPOLLIN;
 }
 
-/* 具体实现中涉及epoll的操作，所以将实现置于poller中 */
-void Channel::Update() noexcept
+void Channel::Add() const
 {
-    loop_->UpdateChannel(this);
+    loop_->AddChannel(*this);
 }
 
-void Channel::Remove() noexcept
+/* 具体实现中涉及epoll的操作，所以将实现置于poller中 */
+void Channel::Update() const
 {
-    loop_->RemoveChannel(this);
+    state_ == State::kNew ? Add() : loop_->UpdateChannel(*this);
+}
+
+void Channel::Remove() const
+{
+    loop_->RemoveChannel(*this);
 }

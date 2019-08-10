@@ -10,11 +10,7 @@
 #include <iostream>
 #include <vector>
 
-#include "acceptor.hh"
-#include "channel.hh"
-#include "event_loop.hh"
 #include "event_loop_thread_pool.hh"
-#include "tcp_connection.hh"
 
 using std::cout;
 using std::endl;
@@ -25,7 +21,7 @@ TcpServer::TcpServer(EventLoop *loop, const EndPoint &endpoint)
       threadPool_{std::make_shared<EventLoopThreadPool>(loop_)}
 {
     acceptor_.SetNewConnectionCallback(
-        [this](int sockfd, const EndPoint &endpoint) { NewConnection(sockfd, endpoint); });
+        [this](sockets::Socket socket, const EndPoint &endpoint) { NewConnection(std::move(socket), endpoint); });
 }
 
 TcpServer::~TcpServer()
@@ -43,11 +39,11 @@ void TcpServer::SetThreadNum(int numThreads)
     threadPool_->SetThreadNum(numThreads);
 }
 
-void TcpServer::NewConnection(int sockfd, const EndPoint &endpoint)
+void TcpServer::NewConnection(sockets::Socket socket, const EndPoint &endpoint)
 {
     EventLoop *ioLoop = threadPool_->GetNextLoop();
-    auto tcpConnection = std::make_shared<TcpConnection>(ioLoop, sockfd);
-    connections_[sockfd] = tcpConnection;
+    auto tcpConnection = std::make_shared<TcpConnection>(ioLoop, std::move(socket));
+    connections_[tcpConnection->GetFd()] = tcpConnection;
     tcpConnection->SetConnectionCallback(connectionCallback_);
     tcpConnection->SetMessageCallback(messageCallback_);
     tcpConnection->SetWriteCompleteCallback(writeCompleteCallback_);
@@ -63,7 +59,7 @@ void TcpServer::RemoveConnection(const TcpConnectionPtr &conn)
 
 void TcpServer::RemoveConnectionInLoop(const TcpConnectionPtr &conn)
 {
-    connections_.erase(conn->GetSockfd());
+    connections_.erase(conn->GetFd());
     EventLoop *ioLoop = conn->GetLoop();
     ioLoop->QueueInLoop([conn] { conn->ConnectDestroyed(); });
 }
