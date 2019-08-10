@@ -117,13 +117,13 @@ public:
     /**
      * @brief 添加Channel到EventLoop对应的Poller中
      */
-    void Add() const;
+    void Add();
     /**
      * @brief 将Channel从其EventLoop对应的Poller中移除
      * 
      * 将对应的fd从epoll移除，想要恢复需要重新Add
      */
-    void Remove() const;
+    void Remove();
 
 private:
     /**
@@ -141,7 +141,7 @@ private:
      * 
      * 更新关心的事件，所有设置读写状态的方法都要调用它
      */
-    inline void Update() const;
+    inline void Update();
 
     EventLoop *loop_;
     int fd_;

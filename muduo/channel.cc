@@ -12,6 +12,11 @@ Channel::Channel(EventLoop *loop, int sockfd) noexcept
 
 void Channel::HandleEvent() const
 {
+    if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
+        if (closeCallback_) {
+            closeCallback_();
+        }
+    }
     if (revents_ & EPOLLIN) {
         if (readCallback_) {
             readCallback_();
@@ -20,11 +25,6 @@ void Channel::HandleEvent() const
     if (revents_ & EPOLLOUT) {
         if (writeCallback_) {
             writeCallback_();
-        }
-    }
-    if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
-        if (closeCallback_) {
-            closeCallback_();
         }
     }
 }
@@ -69,18 +69,19 @@ bool Channel::IsReading() const noexcept
     return events_ & EPOLLIN;
 }
 
-void Channel::Add() const
+void Channel::Add()
 {
     loop_->AddChannel(*this);
+    state_ = State::kAdded;
 }
 
 /* 具体实现中涉及epoll的操作，所以将实现置于poller中 */
-void Channel::Update() const
+void Channel::Update()
 {
     state_ == State::kNew ? Add() : loop_->UpdateChannel(*this);
 }
 
-void Channel::Remove() const
+void Channel::Remove()
 {
     loop_->RemoveChannel(*this);
 }
