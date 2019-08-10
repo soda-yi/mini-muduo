@@ -47,11 +47,7 @@ void EchoServer::OnMessage(const TcpConnectionPtr &conn,
 
     while (data->ReadableBytes() != 0) {
         std::string message = data->RetrieveAsString(kMessageLength);
-        threadPool_.Commit(
-            [this](int n, const TcpConnectionPtr &conn, const std::string &message) {
-                Run(n, conn, message);
-            },
-            30, conn, message);
+        threadPool_.Commit([this, conn, message] { Run(30, conn, message); });
     }
 }
 

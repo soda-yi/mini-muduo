@@ -95,6 +95,11 @@ private:
      * 发送写缓冲区中的数据，当写缓冲区的数据全部发送完毕后，调用WriteCompleteCallback回调
      */
     void HandleWrite();
+    /**
+     * @brief 处理对端关闭事件
+     * 
+     * 通过回调的方式注册到Channel，当对端关闭连接时（EPOLLRDHUP事件）调用
+     */
     void HandleClose();
 
     EventLoop *loop_;

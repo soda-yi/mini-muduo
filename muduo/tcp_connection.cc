@@ -9,6 +9,7 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <mutex>
 
 #include "event_loop.hh"
 
@@ -42,21 +43,26 @@ void TcpConnection::HandleRead()
 
     try {
         auto readlength = socket_.Read(line, sizeof(line));
+        cout << "read " << readlength << " bytes data" << endl;
         std::string linestr(line, readlength);
         inBuf_.Append(linestr);
         messageCallback_(shared_from_this(), &inBuf_);
     } catch (const FdException &e) {
         // TODO: 处理异常
-        throw;
+        if (e.GetErrno() == 0) {
+            //HandleClose();
+        } else {
+            throw;
+        }
     }
 }
 
 void TcpConnection::HandleWrite()
 {
-    //cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
+    cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
     try {
         int n = socket_.Write(outBuf_.Peek(), outBuf_.ReadableBytes());
-        cout << "write " << n << " bytes data again" << endl;
+        cout << "write " << n << " bytes data" << endl;
         outBuf_.Retrieve(n);
     } catch (const FdException &e) {
         // TODO: 添加错误处理
@@ -77,7 +83,7 @@ void TcpConnection::HandleClose()
     channel_.DisableAll();
 
     TcpConnectionPtr guardThis(shared_from_this());
-    // must be the last line
+    // 必须位于最后一行，会涉及socket的关闭，channel的remove等
     if (closeCallback_) {
         closeCallback_(guardThis);
     }
@@ -85,7 +91,7 @@ void TcpConnection::HandleClose()
 
 void TcpConnection::Send(const std::string &message)
 {
-    // FIXME: 不是线程安全的
+    // FIXME: 多次并在一起发送时，会出现Disable后又Enable的情况
     outBuf_.Append(message);
     loop_->RunInLoop([this] { if (!channel_.IsWriting()) { channel_.EnableWriting(); } });
 }

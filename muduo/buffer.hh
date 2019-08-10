@@ -1,6 +1,7 @@
 #ifndef BUFFER_HH
 #define BUFFER_HH
 
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,7 @@ public:
 
 private:
     std::vector<char> buf_;
+    mutable std::shared_mutex mutex_;
 };
 
 #endif

@@ -12,10 +12,11 @@ Channel::Channel(EventLoop *loop, int sockfd) noexcept
 
 void Channel::HandleEvent() const
 {
-    if ((revents_ & EPOLLHUP) && !(revents_ & EPOLLIN)) {
+    if (revents_ & EPOLLRDHUP) {
         if (closeCallback_) {
             closeCallback_();
         }
+        return;
     }
     if (revents_ & EPOLLIN) {
         if (readCallback_) {
@@ -31,7 +32,7 @@ void Channel::HandleEvent() const
 
 void Channel::EnableReading()
 {
-    events_ |= EPOLLIN;
+    events_ |= (EPOLLIN | EPOLLRDHUP);
     Update();
 }
 

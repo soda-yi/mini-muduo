@@ -6,21 +6,25 @@ using std::string;
 
 const char *Buffer::Peek() const
 {
+    std::shared_lock lock{mutex_};
     return buf_.data();
 }
 
 size_t Buffer::ReadableBytes() const
 {
+    std::shared_lock lock{mutex_};
     return buf_.size();
 }
 
 void Buffer::Retrieve(size_t len)
 {
+    std::unique_lock lock{mutex_};
     buf_ = std::vector<char>(buf_.begin() + len, buf_.end());
 }
 
 void Buffer::Append(const string &data)
 {
+    std::unique_lock lock{mutex_};
     buf_.insert(buf_.end(), data.begin(), data.end());
 }
 
