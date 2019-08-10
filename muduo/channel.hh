@@ -117,13 +117,13 @@ public:
     /**
      * @brief 添加Channel到EventLoop对应的Poller中
      */
-    inline void Add() const;
+    void Add() const;
     /**
      * @brief 将Channel从其EventLoop对应的Poller中移除
      * 
      * 将对应的fd从epoll移除，想要恢复需要重新Add
      */
-    inline void Remove() const;
+    void Remove() const;
 
 private:
     /**

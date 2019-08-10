@@ -30,12 +30,16 @@ Acceptor::~Acceptor()
 void Acceptor::HandleRead() const
 {
     EndPoint endpoint;
-    auto connfd = listenfd_.Accept(&endpoint);
-    //TODO: 添加错误处理，记录日志
-    connfd.SetNonBlock();
 
-    if (newConnectionCallback_) {
-        newConnectionCallback_(std::move(connfd), endpoint);
+    try {
+        auto connfd = listenfd_.Accept(&endpoint);
+        connfd.SetNonBlock();
+        if (newConnectionCallback_) {
+            newConnectionCallback_(std::move(connfd), endpoint);
+        }
+    } catch (const NetException &e) {
+        //TODO: 添加错误处理，记录日志
+        throw;
     }
 }
 

@@ -38,7 +38,7 @@ public:
      * 由于每一个TcpConnect的生成都是从Acceptor::Accept后生成的\n
      * 然而在Acceptor::Accept后已经生成一个Socket对象，所以用此对象构造TcpConnection
      */
-    TcpConnection(EventLoop *loop, sockets::Socket socket) noexcept;
+    TcpConnection(EventLoop *loop, sockets::Socket socket);
     TcpConnection(const TcpConnection &) = delete;
     TcpConnection &operator=(const TcpConnection &) = delete;
     TcpConnection(TcpConnection &&) = default;
@@ -81,11 +81,21 @@ public:
     int GetFd() const noexcept { return socket_.GetFd(); }
 
 private:
+    /**
+     * @brief 处理读事件
+     * 
+     * 通过回调的方式注册到Channel，当Channel有读事件时调用\n
+     * 每次Read完，调用MessageCallback回调
+     */
     void HandleRead();
-    /* 用来发送输出缓冲区中剩余的字节 */
+    /**
+     * @brief 处理写事件
+     * 
+     * 通过回调的方式注册到Channel，当Channel有写事件（系统缓冲区可写）时调用\n
+     * 发送写缓冲区中的数据，当写缓冲区的数据全部发送完毕后，调用WriteCompleteCallback回调
+     */
     void HandleWrite();
     void HandleClose();
-    void SendInLoop(const std::string &message);
 
     EventLoop *loop_;
     StateE state_;

@@ -15,14 +15,14 @@
 using std::cout;
 using std::endl;
 
-TcpConnection::TcpConnection(EventLoop *loop, sockets::Socket socket) noexcept
+TcpConnection::TcpConnection(EventLoop *loop, sockets::Socket socket)
     : loop_{loop},
       state_{StateE::kConnecting},
       socket_{std::move(socket)},
       channel_{loop_, socket_.GetFd()}
 {
     channel_.SetReadCallback([this] { HandleRead(); });
-    channel_.SetWriteCallback([this] { HandleClose(); });
+    channel_.SetWriteCallback([this] { HandleWrite(); });
     channel_.SetCloseCallback([this] { HandleClose(); });
     channel_.Add();
     channel_.EnableReading();
@@ -47,22 +47,27 @@ void TcpConnection::HandleRead()
         messageCallback_(shared_from_this(), &inBuf_);
     } catch (const FdException &e) {
         // TODO: 处理异常
+        throw;
     }
 }
 
 void TcpConnection::HandleWrite()
 {
-    int sockfd = channel_.GetFd();
-    if (channel_.IsWriting()) {
-        int n = ::write(sockfd, outBuf_.Peek(), outBuf_.ReadableBytes());
-        if (n > 0) {
-            cout << "write " << n << " bytes data again" << endl;
-            outBuf_.Retrieve(n);
-            if (outBuf_.ReadableBytes() == 0) {
-                channel_.DisableWriting();
-                loop_->QueueInLoop([this] { if(writeCompleteCallback_) { writeCompleteCallback_(shared_from_this());} });
-            }
-        }
+    //cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
+    try {
+        int n = socket_.Write(outBuf_.Peek(), outBuf_.ReadableBytes());
+        cout << "write " << n << " bytes data again" << endl;
+        outBuf_.Retrieve(n);
+    } catch (const FdException &e) {
+        // TODO: 添加错误处理
+        throw;
+    }
+    if (outBuf_.ReadableBytes() == 0) {
+        channel_.DisableWriting();
+        loop_->QueueInLoop([this] { 
+            if(writeCompleteCallback_) { 
+                writeCompleteCallback_(shared_from_this());
+            } });
     }
 }
 
@@ -72,9 +77,6 @@ void TcpConnection::HandleClose()
     channel_.DisableAll();
 
     TcpConnectionPtr guardThis(shared_from_this());
-    if (connectionCallback_) {
-        connectionCallback_(guardThis);
-    }
     // must be the last line
     if (closeCallback_) {
         closeCallback_(guardThis);
@@ -83,28 +85,9 @@ void TcpConnection::HandleClose()
 
 void TcpConnection::Send(const std::string &message)
 {
-    loop_->RunInLoop([this, message] { SendInLoop(message); });
-}
-
-void TcpConnection::SendInLoop(const std::string &message)
-{
-    //cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
-    int n = 0;
-    if (outBuf_.ReadableBytes() == 0) {
-        n = socket_.Write(message.c_str(), message.size());
-        if (n == static_cast<int>(message.size())) {
-            loop_->QueueInLoop([this] { 
-                if(writeCompleteCallback_) { 
-                    writeCompleteCallback_(shared_from_this());
-                } });
-        }
-    }
-    if (n < static_cast<int>(message.size())) {
-        outBuf_.Append(message.substr(n, message.size()));
-        if (!channel_.IsWriting()) {
-            channel_.EnableWriting();
-        }
-    }
+    // FIXME: 不是线程安全的
+    outBuf_.Append(message);
+    loop_->RunInLoop([this] { if (!channel_.IsWriting()) { channel_.EnableWriting(); } });
 }
 
 void TcpConnection::Shutdown()
