@@ -26,7 +26,6 @@ TcpConnection::TcpConnection(EventLoop *loop, sockets::Socket socket)
     channel_.SetWriteCallback([this] { HandleWrite(); });
     channel_.SetCloseCallback([this] { HandleClose(); });
     channel_.Add();
-    channel_.EnableReading();
 }
 
 TcpConnection::~TcpConnection()
@@ -80,17 +79,18 @@ void TcpConnection::HandleWrite()
 void TcpConnection::HandleClose()
 {
     state_ = StateE::kDisconnected;
+    // 必须在HandleClose中而不是ConnectDestroyed中，因为放在ConnectDestroyed中会多次触发EPOLLRDHUP事件直至DisableAll
     channel_.DisableAll();
 
-    TcpConnectionPtr guardThis(shared_from_this());
-    // 必须位于最后一行，会涉及socket的关闭，channel的remove等
     if (closeCallback_) {
-        closeCallback_(guardThis);
+        closeCallback_(shared_from_this());
     }
 }
 
 void TcpConnection::Send(const std::string &message)
 {
+    static std::mutex mutex;
+    std::scoped_lock lock{mutex};
     // FIXME: 多次并在一起发送时，会出现Disable后又Enable的情况
     outBuf_.Append(message);
     loop_->RunInLoop([this] { if (!channel_.IsWriting()) { channel_.EnableWriting(); } });
@@ -118,22 +118,20 @@ void TcpConnection::ForceClose()
 
 void TcpConnection::ConnectEstablished()
 {
+    state_ = StateE::kConnected;
+    channel_.EnableReading();
+
     if (connectionCallback_) {
-        state_ = StateE::kConnected;
         connectionCallback_(shared_from_this());
     }
 }
 
 void TcpConnection::ConnectDestroyed()
 {
-    if (state_ == StateE::kConnected) {
-        state_ = StateE::kDisconnected;
-        channel_.DisableAll();
-
-        if (connectionCallback_) {
-            connectionCallback_(shared_from_this());
-        }
+    if (connectionCallback_) {
+        connectionCallback_(shared_from_this());
     }
+
     channel_.Remove();
     socket_.Close();
 }

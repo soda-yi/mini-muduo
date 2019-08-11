@@ -21,7 +21,7 @@ TcpServer::TcpServer(EventLoop *loop, const EndPoint &endpoint)
       threadPool_{std::make_shared<EventLoopThreadPool>(loop_)}
 {
     acceptor_.SetNewConnectionCallback(
-        [this](sockets::Socket socket, const EndPoint &endpoint) { NewConnection(std::move(socket), endpoint); });
+        [this](sockets::Socket socket, const EndPoint &newEndpoint) { NewConnection(std::move(socket), newEndpoint); });
 }
 
 TcpServer::~TcpServer()
@@ -48,6 +48,7 @@ void TcpServer::NewConnection(sockets::Socket socket, const EndPoint &endpoint)
     tcpConnection->SetMessageCallback(messageCallback_);
     tcpConnection->SetWriteCompleteCallback(writeCompleteCallback_);
     tcpConnection->SetCloseCallback([this](const TcpConnectionPtr &conn) { RemoveConnection(conn); });
+    tcpConnection->SetPeerEndPoint(endpoint);
     ioLoop->RunInLoop([tcpConnection] { tcpConnection->ConnectEstablished(); });
     //cout << "Main Loop thread: " << std::this_thread::get_id() << endl;
 }

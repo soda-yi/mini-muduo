@@ -37,7 +37,9 @@ void EchoServer::Start()
 
 void EchoServer::OnConnection(const TcpConnectionPtr &conn)
 {
-    cout << "OnConnection" << endl;
+    cout << "EchoServer - " << conn->GetPeerEndPoint().ip_addr << conn->GetPeerEndPoint().port
+         << " is "
+         << (conn->IsConnected() ? "UP" : "DOWN") << endl;
 }
 
 void EchoServer::OnMessage(const TcpConnectionPtr &conn,

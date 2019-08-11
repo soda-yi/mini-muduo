@@ -30,7 +30,6 @@ public:
     void SetConnectionCallback(ConnectionCallback cb) { connectionCallback_ = std::move(cb); }
     void SetMessageCallback(MessageCallback cb) { messageCallback_ = std::move(cb); }
     void SetWriteCompleteCallback(WriteCompleteCallback cb) { writeCompleteCallback_ = std::move(cb); }
-    void SetCloseCallback(CloseCallback cb) { closeCallback_ = std::move(cb); }
     void SetThreadInitCallback(ThreadInitCallback cb) { threadInitCallback_ = std::move(cb); }
     void SetThreadNum(int numThreads);
 
@@ -46,7 +45,6 @@ private:
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
     WriteCompleteCallback writeCompleteCallback_;
-    CloseCallback closeCallback_;
     ThreadInitCallback threadInitCallback_;
 };
 

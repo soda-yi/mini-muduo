@@ -11,6 +11,9 @@
 #include "file_descriptor.hh"
 
 class EventLoop;
+class TcpConnection;
+
+using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
 
 /**
  * @brief TcpConnection类，EventHandle的一种实现，表示一条Tcp连接
@@ -23,12 +26,18 @@ class EventLoop;
 class TcpConnection : public std::enable_shared_from_this<TcpConnection>
 {
 private:
-    enum class StateE : char { kDisconnected,
+    enum class StateE : char { kDisconnected, /**< 已断开连接 */
                                kConnecting,
                                kConnected,
                                kDisconnecting };
 
 public:
+    /**
+     * @brief CloseCallback回调，连接关闭
+     * 
+     * 提供给TcpServer使用的接口，主要完成连接关闭过程中TcpServer中资源的清理以及对ConnectionDestroyed的封装
+     */
+    using CloseCallback = std::function<void(const TcpConnectionPtr &conn)>;
     /**
      * @brief 构造一个TcpConnection对象
      * 
@@ -59,22 +68,50 @@ public:
      * 
      * @param message 消息内容
      * 
+     * @bug 当有多个线程同时调用多条消息发送时，会出现多条消息一次合并后发送，\n
+     * 这时会出现处于后面的调用发送0字节导致多调用依次WriteCompleteCallback的情况
+     * 
      * 对外提供的发送接口，用户调用后会自动发送直至所有内容发送完毕\n
      * 发送完毕后，调用用户设置过的WriteCompleteCallback
      */
     void Send(const std::string &message);
+    /**
+     * @brief 关闭连接
+     * 
+     * 对外提供的关闭连接接口，通过shutdown己方wr关闭一条连接。\n
+     * 关闭后，Peer会探测到连接关闭，如果Peer也关闭连接，则会调用HandleClose处理
+     */
     void Shutdown();
+    /**
+     * @brief 强制关闭连接
+     * 
+     * 对外提供的强制关闭连接接口，调用后不再等待Peer关闭连接而是自己主动关闭
+     */
     void ForceClose();
 
+    /**
+     * @brief 连接建立后的收尾工作
+     * 
+     * 提供给TcpServer使用的接口，用于设置state及调用ConnectionCallback等类内操作
+     */
     void ConnectEstablished();
+    /**
+     * @brief 关闭连接后的收尾工作
+     * 
+     * 提供给TcpServer使用的接口，用于调用ConnectionCallback、关闭Socket以及移除Channel等类内操作\n
+     * 通常被TcpServer包装后以CloseCallback的形式回传，在HandleClose中被调用
+     */
     void ConnectDestroyed();
 
     void SetConnectionCallback(ConnectionCallback cb) noexcept { connectionCallback_ = std::move(cb); }
     void SetMessageCallback(MessageCallback cb) noexcept { messageCallback_ = std::move(cb); }
     void SetWriteCompleteCallback(WriteCompleteCallback cb) noexcept { writeCompleteCallback_ = std::move(cb); }
     void SetCloseCallback(CloseCallback cb) noexcept { closeCallback_ = std::move(cb); }
+
     void SetContext(std::any context) noexcept { context_ = std::move(context); }
     std::any &GetContext() noexcept { return context_; }
+    void SetPeerEndPoint(EndPoint endPoint) { endPoint_ = std::move(endPoint); }
+    EndPoint GetPeerEndPoint() const { return endPoint_; }
 
     EventLoop *GetLoop() noexcept { return loop_; }
     const EventLoop *GetLoop() const noexcept { return loop_; }
@@ -98,7 +135,8 @@ private:
     /**
      * @brief 处理对端关闭事件
      * 
-     * 通过回调的方式注册到Channel，当对端关闭连接时（EPOLLRDHUP事件）调用
+     * 通过回调的方式注册到Channel，当对端关闭连接时（EPOLLRDHUP事件）调用\n
+     * 主要处理对端关闭后己方的后续清理工作，包括从epoll的remove，关闭socket等
      */
     void HandleClose();
 
@@ -113,6 +151,7 @@ private:
     Buffer inBuf_;
     Buffer outBuf_;
     std::any context_;
+    EndPoint endPoint_;
 };
 
 #endif
