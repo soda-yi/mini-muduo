@@ -43,7 +43,7 @@ void EventLoop::Loop()
     }
 }
 
-void EventLoop::Quit() noexcept
+void EventLoop::Quit()
 {
     quit_ = true;
     if (!IsInLoopThread()) {
@@ -63,7 +63,7 @@ void EventLoop::RunInLoop(Functor functor)
 void EventLoop::QueueInLoop(Functor functor)
 {
     {
-        std::scoped_lock<std::mutex> lock(mutex_);
+        std::scoped_lock lock{mutex_};
         pendingFunctors_.push_back(functor);
     }
     if (!IsInLoopThread() || callingPendingFunctors_) {
@@ -117,7 +117,7 @@ void EventLoop::DoPendingFunctors()
     callingPendingFunctors_ = true;
 
     {
-        std::scoped_lock<std::mutex> lock(mutex_);
+        std::scoped_lock lock{mutex_};
         functors.swap(pendingFunctors_);
     }
 

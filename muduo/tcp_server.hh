@@ -14,6 +14,11 @@
 
 class EventLoopThreadPool;
 
+/**
+ * @brief TcpServer类
+ * 
+ * 管理所有的连接，处理连接的新建移除
+ */
 class TcpServer
 {
 public:
@@ -25,6 +30,11 @@ public:
     TcpServer &operator=(TcpServer &&) = default;
     ~TcpServer();
 
+    /**
+     * @brief 启动一个TcpServer
+     * 
+     * 调用Acceptor的Listen方法，使listenfd_处于LISTEN状态，以启动一个Server
+     */
     void Start();
 
     void SetConnectionCallback(ConnectionCallback cb) { connectionCallback_ = std::move(cb); }
@@ -33,11 +43,23 @@ public:
     void SetThreadNum(int numThreads);
 
 private:
+    /**
+     * @brief 新建一条连接
+     * 
+     * 通常作为acceptor_的NewConnectionCallback
+     */
     void NewConnection(sockets::Socket socket, const EndPoint &endpoint);
+    /**
+     * @brief 移除一条连接
+     * 
+     * @param conn 
+     * 
+     * 通常作为conn的NewConnectionCallback
+     */
     void RemoveConnection(const TcpConnectionPtr &conn);
     void RemoveConnectionInLoop(const TcpConnectionPtr &conn);
 
-    EventLoop *loop_;
+    EventLoop *loop_; /**< Server的主Loop，acceptor_也共用此loop */
     Acceptor acceptor_;
     std::shared_ptr<EventLoopThreadPool> threadPool_;
     std::map<int, TcpConnectionPtr> connections_;
