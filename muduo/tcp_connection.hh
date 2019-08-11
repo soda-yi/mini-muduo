@@ -5,6 +5,7 @@
 #include <memory>
 #include <queue>
 #include <string>
+#include <tuple>
 
 #include "buffer.hh"
 #include "callbacks.hh"
@@ -68,11 +69,12 @@ public:
      * @brief 向Peer发送一条消息
      * 
      * @param message 消息内容
+     * @param callback 本条消息发送完毕后调用的回调
      * 
      * 对外提供的发送接口，用户调用后会自动发送直至所有内容发送完毕\n
      * 发送完毕后，调用用户设置过的WriteCompleteCallback
      */
-    void Send(const std::string &message);
+    void Send(const std::string &message, WriteCompleteCallback callback = nullptr);
     /**
      * @brief 关闭连接
      * 
@@ -103,7 +105,6 @@ public:
 
     void SetConnectionCallback(ConnectionCallback cb) noexcept { connectionCallback_ = std::move(cb); }
     void SetMessageCallback(MessageCallback cb) noexcept { messageCallback_ = std::move(cb); }
-    void SetWriteCompleteCallback(WriteCompleteCallback cb) noexcept { writeCompleteCallback_ = std::move(cb); }
     void SetCloseCallback(CloseCallback cb) noexcept { closeCallback_ = std::move(cb); }
 
     void SetContext(std::any context) noexcept { context_ = std::move(context); }
@@ -144,10 +145,9 @@ private:
     Channel channel_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
-    WriteCompleteCallback writeCompleteCallback_;
     CloseCallback closeCallback_;
     Buffer inBuf_;
-    std::queue<Buffer> outBufs_;
+    std::queue<std::tuple<Buffer, WriteCompleteCallback>> outBufs_;
     std::any context_;
     EndPoint endPoint_;
 };

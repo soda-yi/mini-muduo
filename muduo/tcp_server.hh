@@ -29,7 +29,6 @@ public:
 
     void SetConnectionCallback(ConnectionCallback cb) { connectionCallback_ = std::move(cb); }
     void SetMessageCallback(MessageCallback cb) { messageCallback_ = std::move(cb); }
-    void SetWriteCompleteCallback(WriteCompleteCallback cb) { writeCompleteCallback_ = std::move(cb); }
     void SetThreadInitCallback(ThreadInitCallback cb) { threadInitCallback_ = std::move(cb); }
     void SetThreadNum(int numThreads);
 
@@ -44,7 +43,6 @@ private:
     std::map<int, TcpConnectionPtr> connections_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
-    WriteCompleteCallback writeCompleteCallback_;
     ThreadInitCallback threadInitCallback_;
 };
 

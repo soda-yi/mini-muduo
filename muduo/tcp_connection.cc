@@ -63,15 +63,16 @@ void TcpConnection::HandleWrite()
         return;
     }
     try {
-        auto &buf = outBufs_.front();
+        auto &[buf, callback] = outBufs_.front();
+        auto temCb = std::move(callback);
         int n = socket_.Write(buf.Peek(), buf.ReadableBytes());
         cout << "write " << n << " bytes data" << endl;
         buf.Retrieve(n);
         if (buf.ReadableBytes() == 0) {
             outBufs_.pop();
-            loop_->QueueInLoop([this] { 
-            if(writeCompleteCallback_) { 
-                writeCompleteCallback_(shared_from_this());
+            loop_->QueueInLoop([this, callback = std::move(temCb)] { 
+            if(callback) { 
+                callback(shared_from_this());
             } });
         }
     } catch (const FdException &e) {
@@ -94,12 +95,12 @@ void TcpConnection::HandleClose()
     }
 }
 
-void TcpConnection::Send(const std::string &message)
+void TcpConnection::Send(const std::string &message, WriteCompleteCallback callback)
 {
     static std::mutex mutex;
     {
         std::scoped_lock lock{mutex};
-        outBufs_.emplace(message);
+        outBufs_.emplace(message, std::move(callback));
     }
     loop_->RunInLoop([this] { if (!channel_.IsWriting()) { channel_.EnableWriting(); } });
 }

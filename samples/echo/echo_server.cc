@@ -25,8 +25,6 @@ EchoServer::EchoServer(EventLoop *loop, const EndPoint &endpoint)
         std::bind(&EchoServer::OnConnection, this, _1));
     server_.SetMessageCallback(
         std::bind(&EchoServer::OnMessage, this, _1, _2));
-    server_.SetWriteCompleteCallback(
-        std::bind(&EchoServer::OnWriteComplete, this, _1));
     server_.SetThreadNum(2);
 }
 
@@ -63,5 +61,5 @@ void EchoServer::Run(int n, const TcpConnectionPtr &conn, const std::string &mes
     //cout << "Fib(" << n << ") = " << Fib(30) << endl;
     //cout << "Work thread: " << std::this_thread::get_id() << endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    conn->Send(message + "\n");
+    conn->Send(message + "\n", std::bind(&EchoServer::OnWriteComplete, this, _1));
 }

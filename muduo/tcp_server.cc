@@ -46,7 +46,6 @@ void TcpServer::NewConnection(sockets::Socket socket, const EndPoint &endpoint)
     connections_[tcpConnection->GetFd()] = tcpConnection;
     tcpConnection->SetConnectionCallback(connectionCallback_);
     tcpConnection->SetMessageCallback(messageCallback_);
-    tcpConnection->SetWriteCompleteCallback(writeCompleteCallback_);
     tcpConnection->SetCloseCallback([this](const TcpConnectionPtr &conn) { RemoveConnection(conn); });
     tcpConnection->SetPeerEndPoint(endpoint);
     ioLoop->RunInLoop([tcpConnection] { tcpConnection->ConnectEstablished(); });
