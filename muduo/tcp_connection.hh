@@ -3,6 +3,7 @@
 
 #include <any>
 #include <memory>
+#include <queue>
 #include <string>
 
 #include "buffer.hh"
@@ -67,9 +68,6 @@ public:
      * @brief 向Peer发送一条消息
      * 
      * @param message 消息内容
-     * 
-     * @bug 当有多个线程同时调用多条消息发送时，会出现多条消息一次合并后发送，\n
-     * 这时会出现处于后面的调用发送0字节导致多调用依次WriteCompleteCallback的情况
      * 
      * 对外提供的发送接口，用户调用后会自动发送直至所有内容发送完毕\n
      * 发送完毕后，调用用户设置过的WriteCompleteCallback
@@ -149,7 +147,7 @@ private:
     WriteCompleteCallback writeCompleteCallback_;
     CloseCallback closeCallback_;
     Buffer inBuf_;
-    Buffer outBuf_;
+    std::queue<Buffer> outBufs_;
     std::any context_;
     EndPoint endPoint_;
 };

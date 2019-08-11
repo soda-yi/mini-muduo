@@ -59,20 +59,27 @@ void TcpConnection::HandleRead()
 void TcpConnection::HandleWrite()
 {
     cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
+    if (outBufs_.empty()) {
+        return;
+    }
     try {
-        int n = socket_.Write(outBuf_.Peek(), outBuf_.ReadableBytes());
+        auto &buf = outBufs_.front();
+        int n = socket_.Write(buf.Peek(), buf.ReadableBytes());
         cout << "write " << n << " bytes data" << endl;
-        outBuf_.Retrieve(n);
+        buf.Retrieve(n);
+        if (buf.ReadableBytes() == 0) {
+            outBufs_.pop();
+            loop_->QueueInLoop([this] { 
+            if(writeCompleteCallback_) { 
+                writeCompleteCallback_(shared_from_this());
+            } });
+        }
     } catch (const FdException &e) {
         // TODO: 添加错误处理
         throw;
     }
-    if (outBuf_.ReadableBytes() == 0) {
+    if (outBufs_.empty()) {
         channel_.DisableWriting();
-        loop_->QueueInLoop([this] { 
-            if(writeCompleteCallback_) { 
-                writeCompleteCallback_(shared_from_this());
-            } });
     }
 }
 
@@ -90,9 +97,10 @@ void TcpConnection::HandleClose()
 void TcpConnection::Send(const std::string &message)
 {
     static std::mutex mutex;
-    std::scoped_lock lock{mutex};
-    // FIXME: 多次并在一起发送时，会出现Disable后又Enable的情况
-    outBuf_.Append(message);
+    {
+        std::scoped_lock lock{mutex};
+        outBufs_.emplace(message);
+    }
     loop_->RunInLoop([this] { if (!channel_.IsWriting()) { channel_.EnableWriting(); } });
 }
 

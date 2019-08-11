@@ -8,6 +8,11 @@
 class Buffer
 {
 public:
+    Buffer() = default;
+    explicit Buffer(std::string s)
+        : buf_{s.cbegin(), s.cend()}
+    {
+    }
     const char *Peek() const;
     size_t ReadableBytes() const;
     void Retrieve(size_t len);
