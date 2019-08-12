@@ -3,7 +3,6 @@
 
 #include "muduo/tcp_server.hh"
 #include "muduo/thread_pool.hh"
-#include "muduo/timer_id.hh"
 
 class EchoServer
 {
@@ -20,7 +19,7 @@ private:
 
     TcpServer server_;
     EventLoop *loop_;
-    TimerId timerId_;
+    Timer::Id timerId_;
     ThreadPool threadPool_;
     int index_ = 0;
 };

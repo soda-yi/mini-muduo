@@ -7,63 +7,17 @@
 #include <iostream>
 
 #include "event_loop.hh"
-#include "timer.hh"
-#include "timer_id.hh"
 
 using std::cout;
 using std::endl;
 using std::vector;
 
-namespace
-{
-
-void ReadTimerfd(int timerfd)
-{
-    uint64_t howmany;
-    ssize_t n = ::read(timerfd, &howmany, sizeof(howmany));
-    if (n != sizeof(howmany)) {
-        cout << "Timer::readTimerfd() error " << endl;
-    }
-}
-
-struct timespec HowMuchTimeFromNow(Timestamp when)
-{
-    int64_t microseconds = when.GetMicroSecondsSinceEpoch() - Timestamp::Now().GetMicroSecondsSinceEpoch();
-    if (microseconds < 100) {
-        microseconds = 100;
-    }
-    struct timespec ts;
-    ts.tv_sec = static_cast<time_t>(
-        microseconds / Timestamp::kMicroSecondsPerSecond);
-    ts.tv_nsec = static_cast<long>(
-        (microseconds % Timestamp::kMicroSecondsPerSecond) * 1000);
-    return ts;
-}
-
-void ResetTimerfd(int timerfd, Timestamp expiration)
-{
-    struct itimerspec newValue;
-    struct itimerspec oldValue;
-    bzero(&newValue, sizeof(newValue));
-    bzero(&oldValue, sizeof(oldValue));
-    newValue.it_value = HowMuchTimeFromNow(expiration);
-    int ret = ::timerfd_settime(timerfd, 0, &newValue, &oldValue);
-    if (ret) {
-        cout << "timerfd_settime error" << endl;
-    }
-}
-
-} // namespace
-
 TimerQueue::TimerQueue(EventLoop *loop)
-    : loop_(loop),
-      timerfd_(::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)),
-      timerfdChannel_(loop_, timerfd_)
+    : loop_{loop},
+      timerfd_{::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)},
+      timerfdChannel_{loop_, timerfd_.GetFd()}
 {
-    if (timerfd_ < 0) {
-        cout << "failed in timerfd_create" << endl;
-    }
-    timerfdChannel_.SetReadCallback(std::bind(&TimerQueue::HandleRead, this));
+    timerfdChannel_.SetReadCallback([this] { HandleRead(); });
     timerfdChannel_.EnableReading();
 }
 
@@ -71,99 +25,86 @@ TimerQueue::~TimerQueue()
 {
     timerfdChannel_.DisableAll();
     timerfdChannel_.Remove();
-    ::close(timerfd_);
-    for (const Entry &timer : timers_) {
-        delete timer.second;
+}
+
+void TimerQueue::doAddTimer(TimerPtr timer)
+{
+    if (timers_.empty() || timers_.top()->GetExpiration() < timer->GetExpiration()) {
+        timerfd_.SetTime(timer->GetExpiration());
     }
+    timers_.push(timer);
 }
 
-void TimerQueue::doAddTimer(Timer *timer)
+void TimerQueue::doCancelTimer(TimerId timerId) noexcept
 {
-    bool earliestChanged = insert(timer);
-    if (earliestChanged) {
-        ResetTimerfd(timerfd_, timer->GetExpiration());
-    }
+    timerId.timer_->Cancel();
 }
 
-void TimerQueue::doCancelTimer(TimerId timerId)
+Timer::Id TimerQueue::AddTimer(Timer::TimePoint when,
+                               Timer::Duration interval,
+                               TimerCallback doWhat)
 {
-    TimerList::iterator it;
-    for (it = timers_.begin(); it != timers_.end(); ++it) {
-        if (it->second == timerId.timer_) {
-            delete it->second;
-            timers_.erase(it);
-            break;
-        }
-    }
+    TimerPtr timer = std::make_shared<Timer>(when, interval, doWhat);
+    loop_->QueueInLoop([this, timer] { doAddTimer(timer); });
+    return timer->GetId();
 }
 
-TimerId TimerQueue::AddTimer(TimerCallback cb, Timestamp when, double interval)
+void TimerQueue::CancelTimer(Timer::Id timerId)
 {
-    Timer *timer = new Timer(cb, when, interval);
-    loop_->QueueInLoop(std::bind(&TimerQueue::doAddTimer, this, timer));
-    return TimerId(timer, timer->GetSequence());
-}
-
-void TimerQueue::CancelTimer(TimerId timerId)
-{
-    loop_->QueueInLoop(std::bind(&TimerQueue::doCancelTimer, this, timerId));
+    loop_->QueueInLoop([this, timerId] { doCancelTimer(timerId); });
 }
 
 void TimerQueue::HandleRead()
 {
-    Timestamp now(Timestamp::Now());
-    ReadTimerfd(timerfd_);
-
-    vector<Entry> expired = getExpired(now);
-    for (const Entry &it : expired) {
-        it.second->Run();
+    TimePoint now{std::chrono::system_clock::now()};
+    uint64_t howmany;
+    ssize_t n = timerfd_.Read(&howmany, sizeof(howmany));
+    if (n != sizeof(howmany)) {
+        cout << "Timer::readTimerfd() error " << endl;
     }
-    reset(expired, now);
+
+    vector<TimerPtr> expired = GetExpired(now);
+    for (auto &e : expired) {
+        e->Run();
+    }
+    ResetExpired(expired, now);
+    SetNextExpired();
 }
 
-std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now)
+std::vector<TimerQueue::TimerPtr> TimerQueue::GetExpired(const TimePoint &now)
 {
-    std::vector<Entry> expired;
-    Entry sentry(now, reinterpret_cast<Timer *>(UINTPTR_MAX));
-    TimerList::iterator end = timers_.lower_bound(sentry);
-    copy(timers_.begin(), end, back_inserter(expired));
-    timers_.erase(timers_.begin(), end);
-    return expired;
-}
+    std::vector<TimerPtr> expired;
 
-void TimerQueue::reset(const vector<Entry> &expired, Timestamp now)
-{
-    vector<Entry>::const_iterator it;
-    for (it = expired.begin(); it != expired.end(); ++it) {
-        if (it->second->IsRepeat()) {
-            it->second->Restart(now);
-            insert(it->second);
+    for (; !timers_.empty();) {
+        auto &timer = timers_.top();
+        auto &&expiration = timer->GetExpiration();
+        if (timer->IsCancelled()) {
+            timers_.pop();
+        } else if (expiration < now) {
+            expired.push_back(timer);
+            timers_.pop();
         } else {
-            delete it->second;
+            break;
         }
     }
 
-    Timestamp nextExpire;
-    if (!timers_.empty()) {
-        nextExpire = timers_.begin()->second->GetExpiration();
-    }
-    if (nextExpire.IsValid()) {
-        ResetTimerfd(timerfd_, nextExpire);
+    return expired;
+}
+
+void TimerQueue::ResetExpired(const vector<TimerPtr> &expired, const TimePoint &now)
+{
+    for (auto &timer : expired) {
+        if (timer->IsRepeat()) {
+            timer->Restart(now);
+            timers_.push(timer);
+        }
     }
 }
 
-bool TimerQueue::insert(Timer *pTimer)
+void TimerQueue::SetNextExpired()
 {
-    bool earliestChanged = false;
-    Timestamp when = pTimer->GetExpiration();
-    TimerList::iterator it = timers_.begin();
-    if (it == timers_.end() || when < it->first) {
-        earliestChanged = true;
+    if (!timers_.empty()) {
+        const auto &nextExpiration = timers_.top()->GetExpiration();
+        timerfd_.SetTime(nextExpiration);
     }
-    std::pair<TimerList::iterator, bool> result = timers_.insert(Entry(when, pTimer));
-    if (!(result.second)) {
-        cout << "timers_.insert() error " << endl;
-    }
-
-    return earliestChanged;
 }

@@ -55,3 +55,25 @@ ssize_t FileDescriptor::Write(const void *buf, std::size_t n) const
         return sz;
     }
 }
+
+void timerfds::TimerFd::SetTime(const TimePoint &expiration)
+{
+    using namespace std::chrono;
+    using Clock = std::chrono::high_resolution_clock;
+    using Duration = Clock::duration;
+
+    struct itimerspec newValue;
+    struct itimerspec oldValue;
+    bzero(&newValue, sizeof(newValue));
+    bzero(&oldValue, sizeof(oldValue));
+
+    Duration nanoseconds = expiration.time_since_epoch() - Clock::now().time_since_epoch();
+    if (nanoseconds < 100ns) {
+        nanoseconds = 100ns;
+    }
+    auto &ts = newValue.it_value;
+    ts.tv_sec = static_cast<decltype(ts.tv_sec)>(duration_cast<seconds>(nanoseconds).count());
+    ts.tv_nsec = static_cast<decltype(ts.tv_nsec)>(nanoseconds.count() % 1000000000);
+
+    ::timerfd_settime(GetFd(), 0, &newValue, &oldValue);
+}

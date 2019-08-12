@@ -1,12 +1,12 @@
 #include "timer.hh"
 
-std::atomic<int64_t> Timer::kTimerCount(0);
+std::atomic<int64_t> Timer::Id::kTimerCount{0};
 
-void Timer::Restart(Timestamp now)
+void Timer::Restart(TimePoint now)
 {
     if (repeat_) {
-        expiration_ = AddTime(now, interval_);
+        when_ = now + interval_;
     } else {
-        expiration_ = Timestamp::Invalid();
+        when_ = TimePoint{};
     }
 }

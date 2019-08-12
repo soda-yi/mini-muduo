@@ -34,9 +34,19 @@ void EchoServer::Start()
 
 void EchoServer::OnConnection(const TcpConnectionPtr &conn)
 {
+    using namespace std::chrono_literals;
     cout << "EchoServer - " << conn->GetPeerEndPoint().ip_addr << conn->GetPeerEndPoint().port
          << " is "
          << (conn->IsConnected() ? "UP" : "DOWN") << endl;
+    threadPool_.Commit([this, conn] {
+        //auto id1 = loop_->RunAfter(10s, [conn] { conn->Send("After 10s\n"); });
+        auto id2 = loop_->RunAfter(5s, [conn] { conn->Send("After 5s\n"); });
+        //auto id3 = loop_->RunAfter(4s, [conn] { conn->Send("After 4s\n"); });
+        auto id4 = loop_->RunAfter(2s, [conn] { conn->Send("After 2s\n"); });
+        //auto id5 = loop_->RunEvery(1s, [conn] { conn->Send("Every 1s\n"); });
+        //std::this_thread::sleep_for(10s);
+        //loop_->CancelTimer(id2);
+    });
 }
 
 void EchoServer::OnMessage(const TcpConnectionPtr &conn,
@@ -59,6 +69,6 @@ void EchoServer::Run(int n, const TcpConnectionPtr &conn, const std::string &mes
 {
     //cout << "Fib(" << n << ") = " << Fib(30) << endl;
     //cout << "Work thread: " << std::this_thread::get_id() << endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     conn->Send(message + "\n", std::bind(&EchoServer::OnWriteComplete, this, _1));
 }

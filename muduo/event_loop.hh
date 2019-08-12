@@ -12,11 +12,7 @@
 #include "channel.hh"
 #include "epoll_poller.hh"
 #include "file_descriptor.hh"
-#include "timer_id.hh"
-#include "timestamp.hh"
-
-class EpollPoller;
-class TimerQueue;
+#include "timer_queue.hh"
 
 /**
  * @brief EventLoop类
@@ -66,10 +62,10 @@ public:
      */
     void RunInLoop(Functor functor);
 
-    [[deprecated]] TimerId RunAt(Timestamp when, TimerCallback cb);
-    [[deprecated]] TimerId RunAfter(double delay, TimerCallback cb);
-    [[deprecated]] TimerId RunEvery(double interval, TimerCallback cb);
-    [[deprecated]] void CancelTimer(TimerId timerId);
+    Timer::Id RunAt(Timer::TimePoint when, TimerCallback doWhat);
+    Timer::Id RunAfter(Timer::Duration delay, TimerCallback doWhat);
+    Timer::Id RunEvery(Timer::Duration interval, TimerCallback doWhat);
+    void CancelTimer(Timer::Id timerId);
 
 private:
     /**
@@ -100,7 +96,7 @@ private:
     std::atomic<bool> callingPendingFunctors_;
     std::thread::id threadId_;
     EpollPoller poller_;
-    std::unique_ptr<TimerQueue> timerQueue_;
+    TimerQueue timerQueue_;
 
     FileDescriptor wakeupfd_;
     Channel wakeupChannel_;

@@ -2,7 +2,6 @@
 #define SAMPLE_HTTP_HTTPSERVER_HH
 
 #include "muduo/tcp_server.hh"
-#include "muduo/timestamp.hh"
 
 class HttpRequest;
 class HttpResponse;

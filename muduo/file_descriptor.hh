@@ -1,9 +1,11 @@
 #ifndef FILE_DESCRIPTOR_HH
 #define FILE_DESCRIPTOR_HH
 
+#include <chrono>
 #include <fcntl.h>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
+#include <sys/timerfd.h>
 #include <type_traits>
 #include <unistd.h>
 
@@ -39,11 +41,10 @@ public:
     }
     /**
      * @brief 析构一个文件描述符
-     * @warning 非virtual的析构函数，意味着继承其的类最好不要定义自己的析构函数
      * 
      * 关闭一个文件描述符
      */
-    ~FileDescriptor()
+    virtual ~FileDescriptor()
     {
         fd_ != kInvalidFd ? Close() : void();
     }
@@ -120,5 +121,29 @@ public:
 };
 
 }; // namespace sockets
+
+namespace timerfds
+{
+
+class TimerFd : public FileDescriptor
+{
+public:
+    using TimePoint = std::chrono::high_resolution_clock::time_point;
+    using FileDescriptor::FileDescriptor;
+
+    TimerFd(const TimerFd &) = delete;
+    TimerFd &operator=(const TimerFd &) = delete;
+    TimerFd(TimerFd &&) = default;
+    TimerFd &operator=(TimerFd &&) = default;
+
+    /**
+     * @brief 在内核中注册一个时间点为expiration的定时器
+     * 
+     * @param expiration 指定的时间点
+     */
+    void SetTime(const TimePoint &expiration);
+};
+
+} // namespace timerfds
 
 #endif

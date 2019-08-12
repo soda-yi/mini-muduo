@@ -1,8 +1,7 @@
 #ifndef SAMPLE_HTTP_HTTP_REQUEST_HH
 #define SAMPLE_HTTP_HTTP_REQUEST_HH
 
-#include "muduo/timestamp.hh"
-
+#include <chrono>
 #include <iostream>
 #include <map>
 #include <string>
@@ -10,6 +9,10 @@
 class HttpRequest
 {
 public:
+    using Clock = std::chrono::high_resolution_clock;
+    using TimePoint = Clock::time_point;
+    using Duration = Clock::duration;
+
     enum Method {
         kInvalid,
         kGet,
@@ -37,8 +40,8 @@ public:
     const std::string &GetPath() const { return path_; }
     void SetQuery(const char *start, const char *end) { query_.assign(start, end); }
     const std::string &GetQuery() const { return query_; }
-    void SetReceiveTime(Timestamp t) { receiveTime_ = t; }
-    Timestamp GetReceiveTime() const { return receiveTime_; }
+    void SetReceiveTime(TimePoint t) { receiveTime_ = t; }
+    TimePoint GetReceiveTime() const { return receiveTime_; }
     void AddHeader(const char *start, const char *colon, const char *end);
     std::string GetHeader(const std::string &field) const;
     const std::map<std::string, std::string> &GetHeaders() const { return headers_; }
@@ -48,7 +51,7 @@ private:
     Version version_;
     std::string path_;
     std::string query_;
-    Timestamp receiveTime_;
+    TimePoint receiveTime_;
     std::map<std::string, std::string> headers_;
 };
 #endif

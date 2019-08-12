@@ -16,7 +16,7 @@ EventLoop::EventLoop()
       callingPendingFunctors_{false},
       threadId_{std::this_thread::get_id()},
       poller_{},
-      timerQueue_(std::make_unique<TimerQueue>(this)),
+      timerQueue_{this},
       wakeupfd_{::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC)},
       wakeupChannel_{this, wakeupfd_.GetFd()}
 {
@@ -89,26 +89,27 @@ void EventLoop::HandleRead() const
     }
 }
 
-TimerId EventLoop::RunAt(Timestamp when, TimerCallback cb)
+Timer::Id EventLoop::RunAt(Timer::TimePoint when, TimerCallback doWhat)
 {
-    return timerQueue_->AddTimer(cb, when, 0.0);
+    using namespace std::chrono;
+    return timerQueue_.AddTimer(when, 0s, std::move(doWhat));
 }
 
-TimerId EventLoop::RunAfter(double delay, TimerCallback cb)
+Timer::Id EventLoop::RunAfter(Timer::Duration delay, TimerCallback doWhat)
 {
-    Timestamp time(AddTime(Timestamp::Now(), delay));
-    return RunAt(time, std::move(cb));
+    auto time{Timer::Clock::now() + delay};
+    return RunAt(time, std::move(doWhat));
 }
 
-TimerId EventLoop::RunEvery(double interval, TimerCallback cb)
+Timer::Id EventLoop::RunEvery(Timer::Duration interval, TimerCallback doWhat)
 {
-    Timestamp time(AddTime(Timestamp::Now(), interval));
-    return timerQueue_->AddTimer(std::move(cb), time, interval);
+    auto time{Timer::Clock::now() + interval};
+    return timerQueue_.AddTimer(time, interval, std::move(doWhat));
 }
 
-void EventLoop::CancelTimer(TimerId timerId)
+void EventLoop::CancelTimer(Timer::Id timerId)
 {
-    timerQueue_->CancelTimer(timerId);
+    timerQueue_.CancelTimer(timerId);
 }
 
 void EventLoop::DoPendingFunctors()

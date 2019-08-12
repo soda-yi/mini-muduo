@@ -4,7 +4,6 @@
 #include "http_context.hh"
 
 #include "http_request.hh"
-#include "muduo/timestamp.hh"
 
 class Buffer;
 
