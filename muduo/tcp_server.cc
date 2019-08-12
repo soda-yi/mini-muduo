@@ -10,15 +10,13 @@
 #include <iostream>
 #include <vector>
 
-#include "event_loop_thread_pool.hh"
-
 using std::cout;
 using std::endl;
 
 TcpServer::TcpServer(EventLoop *loop, const EndPoint &endpoint)
     : loop_{loop},
       acceptor_{loop_, endpoint},
-      threadPool_{std::make_shared<EventLoopThreadPool>(loop_)}
+      threadPool_{std::make_shared<EventLoopThreadPool>(loop_, 4)}
 {
     acceptor_.SetNewConnectionCallback(
         [this](sockets::Socket socket, const EndPoint &newEndpoint) { NewConnection(std::move(socket), newEndpoint); });
@@ -32,11 +30,6 @@ TcpServer::~TcpServer()
         conn->GetLoop()->RunInLoop(
             [conn] { conn->ConnectDestroyed(); });
     }
-}
-
-void TcpServer::SetThreadNum(int numThreads)
-{
-    threadPool_->SetThreadNum(numThreads);
 }
 
 void TcpServer::NewConnection(sockets::Socket socket, const EndPoint &endpoint)
@@ -66,6 +59,5 @@ void TcpServer::RemoveConnectionInLoop(const TcpConnectionPtr &conn)
 
 void TcpServer::Start()
 {
-    threadPool_->Start(threadInitCallback_);
     loop_->RunInLoop([this] { acceptor_.Listen(); });
 }

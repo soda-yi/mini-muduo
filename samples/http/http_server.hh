@@ -23,11 +23,6 @@ public:
         httpCallback_ = cb;
     }
 
-    void SetThreadNum(int numThreads)
-    {
-        server_.SetThreadNum(numThreads);
-    }
-
     void Start();
 
 private:

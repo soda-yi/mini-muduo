@@ -61,15 +61,12 @@ void OnRequest(const HttpRequest &req, HttpResponse *resp)
 
 int main(int argc, char *argv[])
 {
-    int numThreads = 0;
     if (argc > 1) {
         benchmark = true;
-        numThreads = atoi(argv[1]);
     }
     EventLoop loop;
     HttpServer server(&loop, EndPoint{"0.0.0.0", 8080});
     server.SetHttpCallback(OnRequest);
-    server.SetThreadNum(numThreads);
     server.Start();
     loop.Loop();
 }

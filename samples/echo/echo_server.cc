@@ -25,7 +25,6 @@ EchoServer::EchoServer(EventLoop *loop, const EndPoint &endpoint)
         std::bind(&EchoServer::OnConnection, this, _1));
     server_.SetMessageCallback(
         std::bind(&EchoServer::OnMessage, this, _1, _2));
-    server_.SetThreadNum(2);
 }
 
 void EchoServer::Start()

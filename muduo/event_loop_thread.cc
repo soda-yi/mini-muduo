@@ -1,28 +1,21 @@
 #include "event_loop_thread.hh"
 
-#include "event_loop.hh"
-
-EventLoopThread::EventLoopThread(const ThreadInitCallback &cb)
-    : loop_(nullptr),
-      exiting_(false),
-      thread_(std::bind(&EventLoopThread::ThreadFunc, this)),
-      callback_(cb)
-{
-}
-
 EventLoopThread::~EventLoopThread()
 {
     exiting_ = true;
-    if (loop_ != nullptr) {
+    if (loop_) {
         loop_->Quit();
-        thread_.join();
+    }
+    if (thread_) {
+        thread_->join();
     }
 }
 
 EventLoop *EventLoopThread::StartLoop()
 {
+    thread_ = std::make_unique<std::thread>([this] { ThreadFunc(); });
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock{mutex_};
         cond_.wait(lock, [this] { return loop_ != nullptr; });
     }
 
@@ -33,12 +26,8 @@ void EventLoopThread::ThreadFunc()
 {
     EventLoop loop;
 
-    if (callback_) {
-        callback_(&loop);
-    }
-
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock{mutex_};
         loop_ = &loop;
         cond_.notify_all();
     }

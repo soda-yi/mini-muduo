@@ -9,10 +9,9 @@
 #include "acceptor.hh"
 #include "callbacks.hh"
 #include "event_loop.hh"
+#include "event_loop_thread_pool.hh"
 #include "network.hh"
 #include "tcp_connection.hh"
-
-class EventLoopThreadPool;
 
 /**
  * @brief TcpServer类
@@ -22,7 +21,6 @@ class EventLoopThreadPool;
 class TcpServer
 {
 public:
-    using ThreadInitCallback = std::function<void(EventLoop *)>;
     TcpServer(EventLoop *loop, const EndPoint &endpoint);
     TcpServer(const TcpServer &) = delete;
     TcpServer &operator=(const TcpServer &) = delete;
@@ -39,8 +37,6 @@ public:
 
     void SetConnectionCallback(ConnectionCallback cb) { connectionCallback_ = std::move(cb); }
     void SetMessageCallback(MessageCallback cb) { messageCallback_ = std::move(cb); }
-    void SetThreadInitCallback(ThreadInitCallback cb) { threadInitCallback_ = std::move(cb); }
-    void SetThreadNum(int numThreads);
 
 private:
     /**
@@ -65,7 +61,6 @@ private:
     std::map<int, TcpConnectionPtr> connections_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
-    ThreadInitCallback threadInitCallback_;
 };
 
 #endif
