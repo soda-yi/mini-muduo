@@ -25,7 +25,7 @@ public:
     using Duration = Timer::Duration;
     using TimerId = Timer::Id;
 
-    explicit TimerQueue(EventLoop *pLoop);
+    explicit TimerQueue(EventLoop *pLoop) noexcept;
     TimerQueue(const TimerQueue &) = delete;
     TimerQueue &operator=(const TimerQueue &) = delete;
     TimerQueue(TimerQueue &&) = default;

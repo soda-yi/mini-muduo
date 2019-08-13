@@ -24,7 +24,7 @@ ThreadPool::ThreadPool(int size)
     }
 }
 
-ThreadPool::~ThreadPool()
+ThreadPool::~ThreadPool() noexcept(false)
 {
     run_ = false;
     cond_.notify_all();

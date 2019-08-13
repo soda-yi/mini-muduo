@@ -18,7 +18,7 @@ class EpollPoller
 public:
     using ChannelList = std::vector<Channel *>;
 
-    EpollPoller();
+    EpollPoller() noexcept;
     EpollPoller(const EpollPoller &) = delete;
     EpollPoller &operator=(const EpollPoller &) = delete;
     EpollPoller(EpollPoller &&) = default;
@@ -39,19 +39,19 @@ public:
      * 
      * @param[in] channel 需要添加的channel
      */
-    void AddChannel(const Channel &channel) const;
+    void AddChannel(const Channel &channel) const noexcept;
     /**
      * @brief 更新Channel关心的事件，将变更反映至epoll中
      * 
      * @param[in] channel 需要更改的channel
      */
-    void UpdateChannel(const Channel &channel) const;
+    void UpdateChannel(const Channel &channel) const noexcept;
     /**
      * @brief 将Channel从epoll中移除
      * 
      * @param[in] channel 需要移除的channel，remove_handle的实现
      */
-    void RemoveChannel(const Channel &channel) const;
+    void RemoveChannel(const Channel &channel) const noexcept;
 
 private:
     using EventList = std::vector<struct epoll_event>;

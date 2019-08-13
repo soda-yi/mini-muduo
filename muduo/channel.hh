@@ -58,7 +58,7 @@ public:
      * 
      * 设置对读事件关心，并修改fd对应的epoll_event
      */
-    void EnableReading();
+    void EnableReading() noexcept;
     /**
      * @brief 禁止Channel读操作
      * 
@@ -66,7 +66,7 @@ public:
      * 
      * 设置对读事件不关心，并修改fd对应的epoll_event
      */
-    void DisableReading();
+    void DisableReading() noexcept;
     /**
      * @brief 允许Channel写操作
      * 
@@ -74,7 +74,7 @@ public:
      * 
      * 设置对写事件关心，并修改fd对应的epoll_event
      */
-    void EnableWriting();
+    void EnableWriting() noexcept;
     /**
      * @brief 禁止Channel写操作
      * 
@@ -82,7 +82,7 @@ public:
      * 
      * 设置对写事件不关心，并修改fd对应的epoll_event
      */
-    void DisableWriting();
+    void DisableWriting() noexcept;
     /**
      * @brief 禁止Channel所有操作
      * 
@@ -90,7 +90,7 @@ public:
      * 
      * 设置对读写事件不关心，但不将对应的fd从epoll移除，想恢复不用重新Add
      */
-    void DisableAll();
+    void DisableAll() noexcept;
 
     /**
      * @brief 判断Channel是否对读事件关心
@@ -117,13 +117,13 @@ public:
     /**
      * @brief 添加Channel到EventLoop对应的Poller中
      */
-    void Add();
+    void Add() noexcept;
     /**
      * @brief 将Channel从其EventLoop对应的Poller中移除
      * 
      * 将对应的fd从epoll移除，想要恢复需要重新Add
      */
-    void Remove();
+    void Remove() noexcept;
 
 private:
     /**
@@ -141,7 +141,7 @@ private:
      * 
      * 更新关心的事件，所有设置读写状态的方法都要调用它
      */
-    inline void Update();
+    inline void Update() noexcept;
 
     EventLoop *loop_;
     int fd_;

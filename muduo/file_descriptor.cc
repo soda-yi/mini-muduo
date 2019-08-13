@@ -56,7 +56,7 @@ ssize_t FileDescriptor::Write(const void *buf, std::size_t n) const
     }
 }
 
-void timerfds::TimerFd::SetTime(const TimePoint &expiration)
+void timerfds::TimerFd::SetTime(const TimePoint &expiration) const
 {
     using namespace std::chrono;
     using Clock = std::chrono::high_resolution_clock;
@@ -78,7 +78,7 @@ void timerfds::TimerFd::SetTime(const TimePoint &expiration)
     ::timerfd_settime(GetFd(), 0, &newValue, &oldValue);
 }
 
-void timerfds::TimerFd::CancelTime()
+void timerfds::TimerFd::CancelTime() const noexcept
 {
     struct itimerspec newValue;
     bzero(&newValue, sizeof(newValue));

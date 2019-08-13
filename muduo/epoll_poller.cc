@@ -11,7 +11,7 @@
 using std::cout;
 using std::endl;
 
-EpollPoller::EpollPoller()
+EpollPoller::EpollPoller() noexcept
     : epollfd_{::epoll_create1(EPOLL_CLOEXEC)},
       events_{kMaxEvents}
 {
@@ -33,7 +33,7 @@ void EpollPoller::Poll(ChannelList *activeChannels)
     }
 }
 
-void EpollPoller::AddChannel(const Channel &channel) const
+void EpollPoller::AddChannel(const Channel &channel) const noexcept
 {
     struct epoll_event ev;
     ev.data.ptr = const_cast<Channel *>(&channel);
@@ -42,7 +42,7 @@ void EpollPoller::AddChannel(const Channel &channel) const
     ::epoll_ctl(epollfd_.GetFd(), EPOLL_CTL_ADD, fd, &ev);
 }
 
-void EpollPoller::UpdateChannel(const Channel &channel) const
+void EpollPoller::UpdateChannel(const Channel &channel) const noexcept
 {
     struct epoll_event ev;
     ev.data.ptr = const_cast<Channel *>(&channel);
@@ -51,7 +51,7 @@ void EpollPoller::UpdateChannel(const Channel &channel) const
     ::epoll_ctl(epollfd_.GetFd(), EPOLL_CTL_MOD, fd, &ev);
 }
 
-void EpollPoller::RemoveChannel(const Channel &channel) const
+void EpollPoller::RemoveChannel(const Channel &channel) const noexcept
 {
     struct epoll_event ev;
     ev.data.ptr = const_cast<Channel *>(&channel);

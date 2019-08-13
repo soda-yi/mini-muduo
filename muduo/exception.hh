@@ -9,7 +9,7 @@
 class BaseException : public std::runtime_error
 {
 public:
-    BaseException()
+    BaseException() noexcept
         : std::runtime_error{strerror(errno)},
           errno_{errno},
           pid_{getpid()}
@@ -35,7 +35,7 @@ enum class FdExceptionKind {
 class FdException : public BaseException
 {
 public:
-    FdException(FdExceptionKind kind)
+    FdException(FdExceptionKind kind) noexcept
         : exceptionKind_{kind}
     {
     }
@@ -57,7 +57,7 @@ enum class NetExceptionKind {
 class NetException : public BaseException
 {
 public:
-    NetException(NetExceptionKind exceptionKind)
+    NetException(NetExceptionKind exceptionKind) noexcept
         : BaseException{},
           exceptionKind_{exceptionKind}
     {

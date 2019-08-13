@@ -52,7 +52,7 @@ public:
     /**
      * @brief 关闭一个文件描述符
      */
-    void Close() noexcept
+    void Close()
     {
         ::close(fd_);
         fd_ = kInvalidFd;
@@ -81,7 +81,7 @@ public:
      */
     virtual ssize_t Read(void *buf, std::size_t n) const;
 
-    void SetNonBlock() noexcept
+    void SetNonBlock()
     {
         fcntl(fd_, F_SETFL, O_NONBLOCK);
     }
@@ -103,7 +103,7 @@ public:
     Socket(Socket &&) = default;
     Socket &operator=(Socket &&) = default;
 
-    void SetReuseAddr() const
+    void SetReuseAddr() const noexcept
     {
         int on = 1;
         setsockopt(GetFd(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
@@ -117,7 +117,7 @@ public:
         }
     }
     Socket Accept(EndPoint *endpoint) const;
-    void ShutdownWrite() const { ::shutdown(GetFd(), SHUT_WR); }
+    void ShutdownWrite() const noexcept { ::shutdown(GetFd(), SHUT_WR); }
 };
 
 }; // namespace sockets
@@ -141,11 +141,11 @@ public:
      * 
      * @param expiration 指定的时间点
      */
-    void SetTime(const TimePoint &expiration);
+    void SetTime(const TimePoint &expiration) const;
     /**
      * @brief 取消内核中注册的定时器
      */
-    void CancelTime();
+    void CancelTime() const noexcept;
 };
 
 } // namespace timerfds

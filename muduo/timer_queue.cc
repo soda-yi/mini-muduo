@@ -12,7 +12,7 @@ using std::cout;
 using std::endl;
 using std::vector;
 
-TimerQueue::TimerQueue(EventLoop *loop)
+TimerQueue::TimerQueue(EventLoop *loop) noexcept
     : loop_{loop},
       timerfd_{::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)},
       timerfdChannel_{loop_, timerfd_.GetFd()}

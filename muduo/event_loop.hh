@@ -42,9 +42,9 @@ public:
      */
     void Quit();
 
-    void AddChannel(const Channel &channel) const { poller_.AddChannel(channel); }
-    void UpdateChannel(const Channel &channel) const { poller_.UpdateChannel(channel); }
-    void RemoveChannel(const Channel &channel) const { poller_.RemoveChannel(channel); }
+    void AddChannel(const Channel &channel) const noexcept { poller_.AddChannel(channel); }
+    void UpdateChannel(const Channel &channel) const noexcept { poller_.UpdateChannel(channel); }
+    void RemoveChannel(const Channel &channel) const noexcept { poller_.RemoveChannel(channel); }
 
     /**
      * @brief 在IO线程内异步执行回调操作

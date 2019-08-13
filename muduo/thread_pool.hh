@@ -20,7 +20,7 @@ public:
     ThreadPool(int size);
     ThreadPool(const ThreadPool &) = delete;
     ThreadPool(ThreadPool &&) = delete;
-    ~ThreadPool();
+    ~ThreadPool() noexcept(false);
 
     template <class F, class... Args>
     auto Commit(F &&f, Args &&... args)
@@ -42,9 +42,9 @@ public:
         return future;
     }
     //空闲线程数量
-    int IdlCount() { return idleThrNum_; }
+    int IdlCount() const noexcept { return idleThrNum_; }
     //线程数量
-    int ThrCount() { return pool_.size(); }
+    int ThrCount() const noexcept { return pool_.size(); }
 
 private:
     std::queue<Task> tasks_;
