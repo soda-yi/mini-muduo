@@ -77,3 +77,10 @@ void timerfds::TimerFd::SetTime(const TimePoint &expiration)
 
     ::timerfd_settime(GetFd(), 0, &newValue, &oldValue);
 }
+
+void timerfds::TimerFd::CancelTime()
+{
+    struct itimerspec newValue;
+    bzero(&newValue, sizeof(newValue));
+    ::timerfd_settime(GetFd(), 0, &newValue, nullptr);
+}

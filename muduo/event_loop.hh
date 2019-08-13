@@ -31,6 +31,10 @@ public:
 
     /**
      * @brief EventLoop的主循环部分。调用后可以通过Quit退出
+     * 
+     * 同步异步执行回调定义：
+     * - 同步：对Poll结果有事件发生的Channel执行HandleEvent中的执行的回调
+     * - 异步：在DoPendingFunctors中执行的回调
      */
     void Loop();
     /**
@@ -61,10 +65,35 @@ public:
      * 如果调用方在本Loop的IO线程，则同步执行该操作，否则异步执行（调用QueueInLoop）
      */
     void RunInLoop(Functor functor);
-
+    /**
+     * @brief 在IO线程中指定时间点同步执行回调操作
+     * 
+     * @param when 时间点
+     * @param doWhat 待执行的操作
+     * @return 定时器的id，用于取消定时器
+     */
     Timer::Id RunAt(Timer::TimePoint when, TimerCallback doWhat);
+    /**
+     * @brief 在IO线程中当前时间点后一段时间间隔同步执行回调操作
+     * 
+     * @param delay 时间间隔
+     * @param doWhat 待执行的操作
+     * @return 定时器的id，用于取消定时器
+     */
     Timer::Id RunAfter(Timer::Duration delay, TimerCallback doWhat);
+    /**
+     * @brief 在IO线程中当前时间点后一段时间间隔开始每隔一段时间间隔同步执行回调操作
+     * 
+     * @param interval 时间间隔
+     * @param doWhat 待执行的操作
+     * @return 定时器的id，用于取消定时器
+     */
     Timer::Id RunEvery(Timer::Duration interval, TimerCallback doWhat);
+    /**
+     * @brief 在IO线程中当前时间点后一段时间间隔开始每隔一段时间间隔同步执行回调操作
+     * 
+     * @param timerId 定时器Id，添加定时器时获取
+     */
     void CancelTimer(Timer::Id timerId);
 
 private:
@@ -93,7 +122,7 @@ private:
     bool IsInLoopThread() const noexcept { return std::this_thread::get_id() == threadId_; }
 
     std::atomic<bool> quit_;
-    std::atomic<bool> callingPendingFunctors_;
+    bool callingPendingFunctors_; /**< 该变量的存取都在同一IO线程，没有必要是atomic的 */
     std::thread::id threadId_;
     EpollPoller poller_;
     TimerQueue timerQueue_;

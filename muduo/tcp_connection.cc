@@ -42,14 +42,14 @@ void TcpConnection::HandleRead()
 
     try {
         auto readlength = socket_.Read(line, sizeof(line));
-        cout << "read " << readlength << " bytes data" << endl;
+        //cout << "read " << readlength << " bytes data" << endl;
         std::string linestr(line, readlength);
         inBuf_.Append(linestr);
         messageCallback_(shared_from_this(), &inBuf_);
     } catch (const FdException &e) {
         // TODO: 处理异常
         if (e.GetErrno() == 0) {
-            //HandleClose();
+            HandleClose();
         } else {
             throw;
         }
@@ -58,7 +58,7 @@ void TcpConnection::HandleRead()
 
 void TcpConnection::HandleWrite()
 {
-    cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
+    //cout << "IO Loop thread: " << std::this_thread::get_id() << endl;
     if (outBufs_.empty()) {
         return;
     }
@@ -66,7 +66,7 @@ void TcpConnection::HandleWrite()
         auto &[buf, callback] = outBufs_.front();
         auto temCb = std::move(callback);
         int n = socket_.Write(buf.Peek(), buf.ReadableBytes());
-        cout << "write " << n << " bytes data" << endl;
+        //cout << "write " << n << " bytes data" << endl;
         buf.Retrieve(n);
         if (buf.ReadableBytes() == 0) {
             outBufs_.pop();

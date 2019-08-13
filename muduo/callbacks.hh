@@ -8,6 +8,11 @@ class Buffer;
 class TcpConnection;
 using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
 
+/**
+ * @brief TimerCallback回调，定时器到期
+ * 
+ * 当定时器到期时，调用的回调函数
+ */
 using TimerCallback = std::function<void()>;
 /**
  * @brief ConnectionCallback回调，连接状态改变

@@ -25,7 +25,7 @@ public:
     using Duration = Timer::Duration;
     using TimerId = Timer::Id;
 
-    TimerQueue(EventLoop *pLoop);
+    explicit TimerQueue(EventLoop *pLoop);
     TimerQueue(const TimerQueue &) = delete;
     TimerQueue &operator=(const TimerQueue &) = delete;
     TimerQueue(TimerQueue &&) = default;
@@ -75,10 +75,7 @@ private:
     /**
      * @brief 处理持有的timerfd的读事件
      * 
-     * 有读事件到来意味着定时器队列中最早的定时器过期，此时应该做的事：
-     * - 找到所有过期的定时器，执行他们的回调
-     * - 对于过期的且是repeat的定时器，重新计算后再次加入队列
-     * - 从队列中找到最早的计时器，为其在内核中注册定时器
+     * 读取fd中的数据并处理过期的定时器并设置新的
      */
     void HandleRead();
 
@@ -86,23 +83,14 @@ private:
     void doCancelTimer(TimerId timerId) noexcept;
 
     /**
-     * @brief 获取所有过期的（在当前时间点之前）定时器
+     * @brief 处理过期的定时器并设置新的
      * 
-     * @param now 当前时间点
-     * @return std::vector<TimerPtr> 所有过期的定时器
+     * 有定时器过期，此时应该做的事：
+     * - 找到所有过期的定时器，执行他们的回调
+     * - 对于过期的且是repeat的定时器，重新计算后再次加入队列
+     * - 从队列中找到最早的计时器，为其在内核中注册定时器
      */
-    std::vector<TimerPtr> GetExpired(const TimePoint &now);
-    /**
-     * @brief 以当前时间点基准，重新计算过期且repeat的定时器并入列
-     * 
-     * @param expired 过期的定时器
-     * @param now 当前时间点
-     */
-    void ResetExpired(const std::vector<TimerPtr> &expired, const TimePoint &now);
-    /**
-     * @brief 从队列中找到最早的计时器，为其在内核中注册定时器
-     */
-    void SetNextExpired();
+    void PerTickBookkeeping(const TimePoint &now);
 
     EventLoop *loop_;
     timerfds::TimerFd timerfd_;

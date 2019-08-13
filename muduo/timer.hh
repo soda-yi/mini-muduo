@@ -11,7 +11,7 @@
  * 
  * 虽然称为定时器类，但并不具备定时的能力，只有置于TimerQueue中才具备定时能力
  */
-class Timer
+class Timer : public std::enable_shared_from_this<Timer>
 {
 public:
     using Clock = std::chrono::high_resolution_clock;
@@ -35,17 +35,21 @@ public:
         Id(Id &&) = default;
         Id &operator=(Id &&) = default;
 
-    private:
-        Id(Timer *timer)
+        explicit Id(std::shared_ptr<Timer> timer)
             : timer_{timer},
               sequence_{kTimerCount++}
         {
         }
 
-        Timer *timer_;
+        std::weak_ptr<Timer> timer_;
         int64_t sequence_;
 
         static std::atomic<int64_t> kTimerCount;
+
+        friend bool operator==(const Id &lhs, const Id &rhs)
+        {
+            return lhs.sequence_ == rhs.sequence_;
+        }
     };
 
     /**
@@ -61,7 +65,7 @@ public:
     Timer(Timer::TimePoint when,
           Timer::Duration interval,
           TimerCallback doWhat)
-        : id_{this},
+        : id_{nullptr},
           when_{std::move(when)},
           interval_{std::chrono::duration_cast<Duration>(std::move(interval))},
           repeat_{std::chrono::nanoseconds{0} < interval_},
@@ -75,7 +79,14 @@ public:
      * @return TimePoint 过期时间
      */
     TimePoint GetExpiration() const noexcept { return when_; }
-    Id GetId() const noexcept { return id_; }
+    /**
+     * @brief 获取Id
+     * 
+     * @return Id 计时器的Id
+     * 
+     * 获取Id，如果id未设置，则设置后返回
+     */
+    Id GetId() { return id_ ? (*id_) : (*(id_ = std::make_shared<Id>(shared_from_this()))); }
 
     /**
      * @brief 执行过期时间到后应该执行的回调函数
@@ -103,7 +114,7 @@ public:
     void Cancel() noexcept { cancelled_ = true; }
 
 private:
-    Id id_;
+    std::shared_ptr<Id> id_;
     TimePoint when_;
     Duration interval_;
     bool repeat_;

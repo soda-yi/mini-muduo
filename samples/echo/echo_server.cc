@@ -34,19 +34,36 @@ void EchoServer::Start()
 
 void EchoServer::OnConnection(const TcpConnectionPtr &conn)
 {
+    class TimerIdRAII
+    {
+    public:
+        TimerIdRAII(Timer::Id id, EventLoop *loop) noexcept
+            : id_{id}, loop_{loop}
+        {
+        }
+        ~TimerIdRAII()
+        {
+            loop_->CancelTimer(id_);
+        }
+
+    private:
+        Timer::Id id_;
+        EventLoop *loop_;
+    };
+
     using namespace std::chrono_literals;
     cout << "EchoServer - " << conn->GetPeerEndPoint().ip_addr << conn->GetPeerEndPoint().port
          << " is "
          << (conn->IsConnected() ? "UP" : "DOWN") << endl;
-    threadPool_.Commit([this, conn] {
-        //auto id1 = loop_->RunAfter(10s, [conn] { conn->Send("After 10s\n"); });
-        auto id2 = loop_->RunAfter(5s, [conn] { conn->Send("After 5s\n"); });
-        //auto id3 = loop_->RunAfter(4s, [conn] { conn->Send("After 4s\n"); });
-        auto id4 = loop_->RunAfter(2s, [conn] { conn->Send("After 2s\n"); });
-        //auto id5 = loop_->RunEvery(1s, [conn] { conn->Send("Every 1s\n"); });
-        //std::this_thread::sleep_for(10s);
-        //loop_->CancelTimer(id2);
-    });
+    if (conn->IsConnected()) {
+        threadPool_.Commit([this, conn] {
+            TimerIdRAII id1{loop_->RunAfter(5s, [conn] { conn->Send("After 5s\n"); }), loop_};
+            TimerIdRAII id2{loop_->RunAfter(2s, [conn] { conn->Send("After 2s\n"); }), loop_};
+            TimerIdRAII id3{conn->GetLoop()->RunEvery(1s, [conn] { conn->Send("Every 1s\n"); }), loop_};
+            std::this_thread::sleep_for(5s);
+        });
+        cout << "all timer cancelled." << endl;
+    }
 }
 
 void EchoServer::OnMessage(const TcpConnectionPtr &conn,

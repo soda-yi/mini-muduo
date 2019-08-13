@@ -142,6 +142,10 @@ public:
      * @param expiration 指定的时间点
      */
     void SetTime(const TimePoint &expiration);
+    /**
+     * @brief 取消内核中注册的定时器
+     */
+    void CancelTime();
 };
 
 } // namespace timerfds
