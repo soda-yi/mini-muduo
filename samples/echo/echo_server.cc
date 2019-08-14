@@ -52,7 +52,7 @@ void EchoServer::OnConnection(const TcpConnectionPtr &conn)
     };
 
     using namespace std::chrono_literals;
-    cout << "EchoServer - " << conn->GetPeerEndPoint().ip_addr << conn->GetPeerEndPoint().port
+    cout << "EchoServer - " << conn->GetPeerEndPoint().GetIpAddrString() << conn->GetPeerEndPoint().GetPortH()
          << " is "
          << (conn->IsConnected() ? "UP" : "DOWN") << endl;
     if (conn->IsConnected()) {

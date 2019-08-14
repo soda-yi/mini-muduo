@@ -1,6 +1,6 @@
 .vscode/
 .cache/
-out/
+doc/
 
 build/
 test/
