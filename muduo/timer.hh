@@ -35,7 +35,7 @@ public:
         Id(Id &&) = default;
         Id &operator=(Id &&) = default;
 
-        explicit Id(std::shared_ptr<Timer> timer)
+        explicit Id(const std::shared_ptr<Timer> &timer)
             : timer_{timer},
               sequence_{kTimerCount++}
         {

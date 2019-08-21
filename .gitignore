@@ -10,3 +10,9 @@ GRTAGS
 GTAGS
 
 Doxyfile
+
+# CMake
+cmake-build-*/
+
+# JetBrains
+.idea

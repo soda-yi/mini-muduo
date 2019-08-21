@@ -1,9 +1,7 @@
 #include "timer_queue.hh"
 
 #include <sys/timerfd.h>
-#include <unistd.h>
 
-#include <cstring>
 #include <iostream>
 
 #include "event_loop.hh"

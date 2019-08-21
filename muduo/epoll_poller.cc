@@ -1,7 +1,5 @@
 #include "epoll_poller.hh"
 
-#include <unistd.h>
-
 #include <cerrno>
 
 #include <iostream>

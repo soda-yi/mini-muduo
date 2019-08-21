@@ -1,17 +1,6 @@
 #include "tcp_server.hh"
 
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include <cerrno>
-#include <cstring>
-#include <iostream>
 #include <vector>
-
-using std::cout;
-using std::endl;
 
 TcpServer::TcpServer(EventLoop *loop, const EndPoint &endpoint)
     : loop_{loop},
